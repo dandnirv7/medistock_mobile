@@ -158,10 +158,12 @@ Pre-commit gate: `flutter analyze` + `flutter test` both green.
 
 ## API Contract
 
-The canonical REST contract lives in `medistock-docs/docs/api_contract.md`.
-A working copy is bundled in `docs/contracts/AGENTS.md` (per poly-repo sync
-rules). When the contract changes upstream, copy the new file into
-`docs/contracts/` and commit as `docs(mobile): sync contracts from medistock-docs`.
+The canonical REST contract lives in `medistock-docs/docs/`. A working copy
+is bundled in `docs/contracts/` (per poly-repo sync rules) containing:
+`AGENTS.md`, `api_contract.md`, `prd.md`, `database_schema_mvp.md`,
+`folder_structure.md`. When the contract changes upstream, copy the updated
+file(s) into `docs/contracts/` and commit as
+`docs(mobile): sync contracts from medistock-docs`.
 
 ---
 

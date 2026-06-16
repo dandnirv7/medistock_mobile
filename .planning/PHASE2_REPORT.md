@@ -74,3 +74,22 @@ https://github.com/dandnirv7/medistock_mobile/compare/main...feat/integration-ph
 
 Title: `feat(mobile): Fase 2 wire API + Fase 3 polish (README)`
 Body: gunakan isi section ini + `PHASE2_REPORT.md` di atas.
+
+
+---
+
+# Kontrak Sync (2026-06-16)
+
+Initial sync kontrak dari `medistock-docs/docs/` ke `medistock_mobile/docs/contracts/`
+(4 file ditambahkan, AGENTS.md sudah sinkron sejak Fase 1):
+
+| File | SHA-12 | Size |
+|---|---|---|
+| api_contract.md         | `0382d68e18d6` | 24058 B |
+| prd.md                  | `dd65425acaff` | 24702 B |
+| database_schema_mvp.md  | `1eb63426488b` | 3805 B |
+| folder_structure.md     | `353a47ecb5f3` | 20047 B |
+| AGENTS.md               | `4d32171d...`  | 14993 B (unchanged) |
+
+Saat kontrak berubah di upstream, re-copy + commit
+`docs(mobile): sync contracts from medistock-docs` (lihat AGENT_MOBILE.md §11.2).
