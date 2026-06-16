@@ -18,7 +18,14 @@ class ProfileController extends GetxController {
     } catch (_) {
       // Ignore network errors; we clear local state regardless.
     }
-    await session.clear();
-    Get.offAllNamed(AppRoutes.login);
+    try {
+      await session.clear();
+    } catch (_) {
+      // Storage clear failure shouldn't block sign-out: the in-memory
+      // Rxn fields are already null after clear() succeeded partially.
+    }
+    if (Get.currentRoute != AppRoutes.login) {
+      Get.offAllNamed(AppRoutes.login);
+    }
   }
 }

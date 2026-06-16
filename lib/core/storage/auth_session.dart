@@ -11,36 +11,37 @@ class AuthSession extends GetxService {
 
   final SecureStorageService _storage;
 
-  String? _token;
-  UserModel? _user;
+  final Rxn<String> _token = Rxn<String>();
+  final Rxn<UserModel> _user = Rxn<UserModel>();
   bool _hydrated = false;
 
-  String? get token => _token;
-  UserModel? get user => _user;
-  bool get isAuthenticated => _token != null && _token!.isNotEmpty;
+  String? get token => _token.value;
+  Rxn<UserModel> get userRx => _user;
+  UserModel? get user => _user.value;
+  bool get isAuthenticated => _token.value != null && _token.value!.isNotEmpty;
 
   Future<void> hydrate() async {
     if (_hydrated) return;
-    _token = await _storage.readToken();
-    _user = await _readUser();
+    _token.value = await _storage.readToken();
+    _user.value = await _readUser();
     _hydrated = true;
   }
 
   Future<void> setAuth({required String token, required UserModel user}) async {
-    _token = token;
-    _user = user;
+    _token.value = token;
+    _user.value = user;
     await _storage.writeToken(token);
     await _storage.writeUser(_encode(user));
   }
 
   Future<void> updateUser(UserModel user) async {
-    _user = user;
+    _user.value = user;
     await _storage.writeUser(_encode(user));
   }
 
   Future<void> clear() async {
-    _token = null;
-    _user = null;
+    _token.value = null;
+    _user.value = null;
     await _storage.clearAuth();
   }
 

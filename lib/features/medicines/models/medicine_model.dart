@@ -132,8 +132,8 @@ class MedicineModel {
       supplierName:
           (json['supplierName'] ?? supplier?['name']) as String?,
       unit: (json['unit'] ?? '').toString(),
-      purchasePrice: (json['purchasePrice'] as num?)?.toDouble() ?? 0,
-      sellingPrice: (json['sellingPrice'] as num?)?.toDouble() ?? 0,
+      purchasePrice: _toDouble(json['purchasePrice']),
+      sellingPrice: _toDouble(json['sellingPrice']),
       currentStock: (json['currentStock'] as num?)?.toInt() ?? 0,
       minimumStock: (json['minimumStock'] as num?)?.toInt() ?? 0,
       expiredDate: DateTime.tryParse(json['expiredDate']?.toString() ?? ''),
@@ -224,4 +224,11 @@ class MedicineModel {
     }
     return ExpiredStatus.safe;
   }
+}
+
+double _toDouble(dynamic v) {
+  if (v == null) return 0;
+  if (v is num) return v.toDouble();
+  if (v is String) return double.tryParse(v) ?? 0;
+  return 0;
 }
