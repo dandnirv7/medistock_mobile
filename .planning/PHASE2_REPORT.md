@@ -47,3 +47,30 @@ bd9427b fix(mobile): robust price parsing & enable cleartext for local API
 - Root `.planning/ORCHESTRATION.md` di-mount readonly oleh sandbox (lihat ORCHESTRATION §9). Update checklist via file ini di sub-repo mobile sebagai gantinya. User/koordinator boleh propagate ke root saat merge.
 - Branch `feat/integration-phase-2-wire-api` di-create & commit, TIDAK push (per AGENTS.md: push oleh user/koordinator).
 - `medistock-api`: totalValue sudah on main oleh agent API sebelumnya, working tree clean untuk dashboard; TIDAK perlu commit baru di sana.
+
+
+---
+
+# Fase 3 (Polish) Result — 2026-06-16
+
+- `README.md` diganti dari boilerplate Flutter ke dokumentasi MVP (170 baris, daftar 12 fitur, env vars, struktur, branch convention)
+- `pubspec.yaml` description di-update
+- `flutter analyze` 0 issues
+- `flutter test` 32 pass + 9 skip (default)
+- `flutter build apk --debug` sukses → `build/app/outputs/flutter-apk/app-debug.apk` (174 MB)
+
+## Commits on `feat/integration-phase-2-wire-api`
+```
+1e41400 docs(mobile): replace boilerplate README with MVP documentation
+803e5a9 docs(mobile): add Fase 2 integration smoke report (12 fitur)
+caa182b test(mobile): add API repository smoke test covering 12 MVP features
+bd9427b fix(mobile): robust price parsing & enable cleartext for local API
+```
+
+## PR
+`gh` CLI tidak tersedia di environment ini. User/koordinator buka PR manual dari
+push branch `feat/integration-phase-2-wire-api` ke `main` di
+https://github.com/dandnirv7/medistock_mobile/compare/main...feat/integration-phase-2-wire-api
+
+Title: `feat(mobile): Fase 2 wire API + Fase 3 polish (README)`
+Body: gunakan isi section ini + `PHASE2_REPORT.md` di atas.
