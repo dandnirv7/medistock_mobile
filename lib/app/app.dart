@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../core/storage/auth_session.dart';
 import '../core/theme/app_theme.dart';
 import 'bindings/initial_binding.dart';
 import 'routes/app_pages.dart';
@@ -22,10 +21,5 @@ class MediStockApp extends StatelessWidget {
     );
   }
 
-  String _resolveInitialRoute() {
-    if (!Get.isRegistered<AuthSession>()) return AppRoutes.login;
-    final session = Get.find<AuthSession>();
-    if (session.isAuthenticated) return AppRoutes.dashboard;
-    return AppRoutes.login;
-  }
+  String _resolveInitialRoute() => AppRoutes.splash;
 }
