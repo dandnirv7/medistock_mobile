@@ -9,6 +9,7 @@ import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_overlay.dart';
 import '../controllers/stock_movement_list_controller.dart';
 import '../models/stock_movement_model.dart';
+import '../widgets/stock_movement_filter_sheet.dart';
 
 class StockMovementListView extends GetView<StockMovementListController> {
   const StockMovementListView({super.key});
@@ -17,64 +18,99 @@ class StockMovementListView extends GetView<StockMovementListController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Riwayat Mutasi'),
+        title: const Text('Mutasi Stok'),
         actions: [
-          PopupMenuButton<StockMovementType?>(
-            tooltip: 'Filter tipe',
-            icon: const Icon(Icons.filter_list),
-            onSelected: controller.setType,
-            itemBuilder: (_) => [
-              const PopupMenuItem<StockMovementType?>(
-                value: null,
-                child: Text('Semua'),
+          Obx(
+            () => IconButton(
+              tooltip: 'Filter',
+              onPressed: () => _openFilterSheet(context),
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.tune),
+                  if (controller.hasActiveFilters)
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppColors.danger,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              const PopupMenuItem<StockMovementType?>(
-                value: StockMovementType.stockIn,
-                child: Text('Stok Masuk'),
-              ),
-              const PopupMenuItem<StockMovementType?>(
-                value: StockMovementType.stockOut,
-                child: Text('Stok Keluar'),
-              ),
-            ],
+            ),
           ),
         ],
       ),
-      body: Obx(() {
-        if (controller.isLoading.value && controller.items.isEmpty) {
-          return const LoadingOverlay();
-        }
-        if (controller.errorMessage.value != null &&
-            controller.items.isEmpty) {
-          return ErrorView(
-            message: controller.errorMessage.value!,
-            onRetry: controller.refresh,
-          );
-        }
-        if (controller.items.isEmpty) {
-          return const EmptyState(
-            icon: Icons.swap_vert_outlined,
-            title: 'Belum ada mutasi',
-          );
-        }
-        return RefreshIndicator(
-          onRefresh: controller.refresh,
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
-            itemCount: controller.items.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 6),
-            itemBuilder: (context, i) => _MovementTile(
-              movement: controller.items[i],
-              onTapMedicine: () {
-                Get.toNamed(
-                  AppRoutes.medicineDetail,
-                  parameters: {'id': controller.items[i].medicineId},
-                );
-              },
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: TextField(
+              onChanged: controller.setSearch,
+              decoration: InputDecoration(
+                hintText: 'Cari obat, supplier, atau catatan...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: Obx(
+                  () => controller.search.value.isEmpty
+                      ? const SizedBox.shrink()
+                      : IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () {
+                            controller.search.value = '';
+                            controller.fetch();
+                          },
+                        ),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
             ),
           ),
-        );
-      }),
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value && controller.items.isEmpty) {
+                return const LoadingOverlay();
+              }
+              if (controller.errorMessage.value != null &&
+                  controller.items.isEmpty) {
+                return ErrorView(
+                  message: controller.errorMessage.value!,
+                  onRetry: controller.refresh,
+                );
+              }
+              if (controller.items.isEmpty) {
+                return const EmptyState(
+                  icon: Icons.swap_vert_outlined,
+                  title: 'Belum ada mutasi',
+                );
+              }
+              return RefreshIndicator(
+                onRefresh: controller.refresh,
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
+                  itemCount: controller.items.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 6),
+                  itemBuilder: (context, i) => _MovementCard(
+                    movement: controller.items[i],
+                    onTapMedicine: () {
+                      Get.toNamed(
+                        AppRoutes.medicineDetail,
+                        parameters: {'id': controller.items[i].medicineId},
+                      );
+                    },
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -95,10 +131,19 @@ class StockMovementListView extends GetView<StockMovementListController> {
       ),
     );
   }
+
+  void _openFilterSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const StockMovementFilterSheet(),
+    );
+  }
 }
 
-class _MovementTile extends StatelessWidget {
-  const _MovementTile({
+class _MovementCard extends StatelessWidget {
+  const _MovementCard({
     required this.movement,
     required this.onTapMedicine,
   });
@@ -109,50 +154,66 @@ class _MovementTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isIn = movement.type == StockMovementType.stockIn;
-    final color = isIn ? AppColors.success : AppColors.danger;
+    final accent = isIn ? AppColors.success : AppColors.danger;
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              isIn ? Icons.arrow_downward : Icons.arrow_upward,
-              color: color,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  movement.medicineName ?? '-',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${movement.medicineCode ?? '-'} • ${movement.reason.label}',
+                child: Text(
+                  isIn ? 'IN' : 'OUT',
                   style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: GestureDetector(
+                  onTap: onTapMedicine,
+                  child: Text(
+                    movement.medicineName ?? '-',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _Cell(label: 'Qty', value: '${isIn ? '+' : '-'}${movement.quantity}'),
+              const SizedBox(width: 16),
+              _Cell(label: 'Sebelum', value: '${movement.stockBefore}'),
+              const SizedBox(width: 16),
+              _Cell(label: 'Sesudah', value: '${movement.stockAfter}'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
                   movement.transactionDate == null
                       ? '-'
                       : DateFormatter.toDisplayWithTime(
@@ -160,48 +221,53 @@ class _MovementTile extends StatelessWidget {
                         ),
                   style: const TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 11,
+                    fontSize: 12,
                   ),
-                ),
-                if (movement.notes != null && movement.notes!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      movement.notes!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${isIn ? '+' : '-'}${movement.quantity}',
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
                 ),
               ),
-              const SizedBox(height: 2),
               Text(
-                '→ ${movement.stockAfter}',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
+                movement.reason.label,
+                style: TextStyle(
+                  color: accent,
                   fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _Cell extends StatelessWidget {
+  const _Cell({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 11,
+          ),
+        ),
+        const SizedBox(height: 1),
+        Text(
+          value,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ),
+        ),
+      ],
     );
   }
 }
