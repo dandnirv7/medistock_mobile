@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../../categories/bindings/category_binding.dart';
+import '../../dashboard/bindings/dashboard_binding.dart';
+import '../../medicines/bindings/medicine_binding.dart';
+import '../../profile/bindings/profile_binding.dart';
+import '../../stock_movements/bindings/stock_movement_binding.dart';
 
 class HomeShellController extends GetxController {
   final RxInt currentIndex = 0.obs;
@@ -44,14 +49,32 @@ class HomeShellController extends GetxController {
     ),
   ];
 
+  bool _bootstrapped = false;
+
   @override
   void onReady() {
     super.onReady();
+    _bootstrapBindings();
     _readTabArgument();
   }
 
-  /// Called by `Get.offAllNamed(..., arguments: {'tab': i})` so the shell
-  /// re-syncs the active tab after a drawer / quick-action navigation.
+  /// Eagerly call every binding the tab roots need. GetX `Bindings.dependencies()`
+  /// is idempotent when the target is already registered, so calling it on
+  /// every shell mount is safe. This is required because the tab roots are
+  /// mounted inside a nested Navigator whose pages are NOT routed through
+  /// GetX — therefore GetPage.binding never fires for them.
+  void _bootstrapBindings() {
+    if (_bootstrapped) return;
+    _bootstrapped = true;
+    DashboardBinding().dependencies();
+    MedicineBinding().dependencies();
+    StockMovementBinding().dependencies();
+    ProfileBinding().dependencies();
+    // CategoryBinding is also needed so the Kategori drawer destination
+    // (pushed on the root navigator) can resolve its controller.
+    CategoryBinding().dependencies();
+  }
+
   void _readTabArgument() {
     final args = Get.arguments;
     if (args is Map && args['tab'] is int) {
@@ -60,9 +83,6 @@ class HomeShellController extends GetxController {
     }
   }
 
-  /// Tap on bottom nav: rebuild the shell with the new active tab. We use
-  /// `Get.offAllNamed` to clear the navigation stack and stay inside the
-  /// shell so the bottom navigation and drawer stay visible.
   void changeTab(int index) {
     if (index == currentIndex.value) return;
     currentIndex.value = index;
@@ -72,8 +92,6 @@ class HomeShellController extends GetxController {
     );
   }
 
-  /// Called from view to refresh the active tab when arguments arrive
-  /// after the first frame.
   void syncFromArguments() => _readTabArgument();
 }
 
