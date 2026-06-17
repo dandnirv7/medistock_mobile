@@ -22,8 +22,8 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('MediStock'), findsOneWidget);
-    expect(find.text('Username'), findsOneWidget);
+    expect(find.text('Selamat Datang!'), findsOneWidget);
+    expect(find.text('Email / Username'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
   });
 }

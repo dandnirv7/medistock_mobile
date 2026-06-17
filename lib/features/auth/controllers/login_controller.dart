@@ -46,7 +46,7 @@ class LoginController extends GetxController {
         token: res.token,
         user: res.user,
       );
-      Get.offAllNamed(AppRoutes.dashboard);
+      Get.offAllNamed(AppRoutes.home);
     } catch (e) {
       errorMessage.value = _humanize(e);
     } finally {

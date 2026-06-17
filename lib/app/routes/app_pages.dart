@@ -9,12 +9,16 @@ import '../../features/categories/views/category_form_view.dart';
 import '../../features/categories/views/category_list_view.dart';
 import '../../features/dashboard/bindings/dashboard_binding.dart';
 import '../../features/dashboard/views/dashboard_view.dart';
+import '../../features/home/bindings/home_shell_binding.dart';
+import '../../features/home/views/home_shell_view.dart';
 import '../../features/medicines/bindings/medicine_binding.dart';
 import '../../features/medicines/views/medicine_detail_view.dart';
 import '../../features/medicines/views/medicine_form_view.dart';
 import '../../features/medicines/views/medicine_list_view.dart';
 import '../../features/profile/bindings/profile_binding.dart';
 import '../../features/profile/views/profile_view.dart';
+import '../../features/splash/bindings/splash_binding.dart';
+import '../../features/splash/views/splash_view.dart';
 import '../../features/stock_movements/bindings/stock_movement_binding.dart';
 import '../../features/stock_movements/views/stock_in_view.dart';
 import '../../features/stock_movements/views/stock_movement_list_view.dart';
@@ -30,9 +34,20 @@ class AppPages {
 
   static final List<GetPage> pages = [
     GetPage(
+      name: AppRoutes.splash,
+      page: () => const SplashView(),
+      binding: SplashBinding(),
+    ),
+    GetPage(
       name: AppRoutes.login,
       page: () => const LoginView(),
       binding: AuthBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.home,
+      page: () => const HomeShellView(),
+      binding: HomeShellBinding(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: AppRoutes.dashboard,
