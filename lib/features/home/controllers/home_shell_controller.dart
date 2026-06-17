@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
-import '../../categories/bindings/category_binding.dart';
-import '../../dashboard/bindings/dashboard_binding.dart';
-import '../../medicines/bindings/medicine_binding.dart';
-import '../../profile/bindings/profile_binding.dart';
-import '../../stock_movements/bindings/stock_movement_binding.dart';
 
 class HomeShellController extends GetxController {
+  /// Active tab index (0..4). Hydrated from `Get.arguments['tab']` and
+  /// kept in sync with the current route when the user pushes deeper
+  /// screens and pops back.
   final RxInt currentIndex = 0.obs;
 
   static const List<HomeTabSpec> tabs = <HomeTabSpec>[
@@ -49,30 +47,25 @@ class HomeShellController extends GetxController {
     ),
   ];
 
-  bool _bootstrapped = false;
-
   @override
   void onReady() {
     super.onReady();
-    _bootstrapBindings();
     _readTabArgument();
   }
 
-  /// Eagerly call every binding the tab roots need. GetX `Bindings.dependencies()`
-  /// is idempotent when the target is already registered, so calling it on
-  /// every shell mount is safe. This is required because the tab roots are
-  /// mounted inside a nested Navigator whose pages are NOT routed through
-  /// GetX — therefore GetPage.binding never fires for them.
-  void _bootstrapBindings() {
-    if (_bootstrapped) return;
-    _bootstrapped = true;
-    DashboardBinding().dependencies();
-    MedicineBinding().dependencies();
-    StockMovementBinding().dependencies();
-    ProfileBinding().dependencies();
-    // CategoryBinding is also needed so the Kategori drawer destination
-    // (pushed on the root navigator) can resolve its controller.
-    CategoryBinding().dependencies();
+  /// Called whenever the shell becomes visible (after returning from a
+  /// pushed route) so the active tab indicator matches the current
+  /// GetX route.
+  void syncFromCurrentRoute() {
+    final route = Get.currentRoute;
+    for (final tab in tabs) {
+      if (tab.route == route) {
+        if (currentIndex.value != tab.index) {
+          currentIndex.value = tab.index;
+        }
+        return;
+      }
+    }
   }
 
   void _readTabArgument() {
@@ -80,19 +73,22 @@ class HomeShellController extends GetxController {
     if (args is Map && args['tab'] is int) {
       final i = (args['tab'] as int).clamp(0, tabs.length - 1);
       currentIndex.value = i;
+    } else {
+      syncFromCurrentRoute();
     }
   }
 
+  /// Tap on a bottom nav destination. We push the tab's root route via
+  /// GetX so its `GetPage.binding` fires (registers the controller
+  /// lazily) and the view is fully wired. `Get.offAllNamed` clears
+  /// the navigation stack so the back button returns to the previous
+  /// logical destination rather than cycling through previously
+  /// selected tabs.
   void changeTab(int index) {
-    if (index == currentIndex.value) return;
-    currentIndex.value = index;
-    Get.offAllNamed<void>(
-      AppRoutes.home,
-      arguments: {'tab': index},
-    );
+    final tab = tabs[index];
+    currentIndex.value = tab.index;
+    Get.offAllNamed<void>(tab.route);
   }
-
-  void syncFromArguments() => _readTabArgument();
 }
 
 class HomeTabSpec {

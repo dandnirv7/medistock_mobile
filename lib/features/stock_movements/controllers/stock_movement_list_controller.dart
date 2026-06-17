@@ -37,11 +37,23 @@ class StockMovementListController extends GetxController {
       (noteQuery.value != null && noteQuery.value!.isNotEmpty) ||
       search.value.isNotEmpty;
 
+  DateTime? _lastFetchAt;
+  static const Duration _cooldown = Duration(seconds: 10);
+
   @override
   void onReady() {
     super.onReady();
     _loadMedicineOptions();
-    fetch();
+    _maybeFetch();
+  }
+
+  void _maybeFetch({bool reset = true}) {
+    if (_lastFetchAt != null &&
+        DateTime.now().difference(_lastFetchAt!) < _cooldown) {
+      return;
+    }
+    _lastFetchAt = DateTime.now();
+    fetch(reset: reset);
   }
 
   Future<void> _loadMedicineOptions() async {
