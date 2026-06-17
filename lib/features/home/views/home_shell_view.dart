@@ -6,6 +6,10 @@ import '../../../core/storage/auth_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/data/repositories/auth_repository.dart';
 import '../../auth/models/user_model.dart';
+import '../../dashboard/views/dashboard_view.dart';
+import '../../medicines/views/medicine_list_view.dart';
+import '../../profile/views/profile_view.dart';
+import '../../stock_movements/views/stock_movement_list_view.dart';
 import '../controllers/home_shell_controller.dart';
 
 /// Host shell with persistent bottom navigation. Each tab hosts a
@@ -27,7 +31,7 @@ class HomeShellView extends GetView<HomeShellController> {
           index: index,
           children: [
             for (int i = 0; i < HomeShellController.tabs.length; i++)
-              _TabNavigator(
+              _TabHost(
                 tab: HomeShellController.tabs[i],
                 isActive: i == index,
               ),
@@ -52,8 +56,8 @@ class HomeShellView extends GetView<HomeShellController> {
   }
 }
 
-class _TabNavigator extends StatelessWidget {
-  const _TabNavigator({required this.tab, required this.isActive});
+class _TabHost extends StatelessWidget {
+  const _TabHost({required this.tab, required this.isActive});
 
   final HomeTabSpec tab;
   final bool isActive;
@@ -65,9 +69,7 @@ class _TabNavigator extends StatelessWidget {
       onGenerateRoute: (settings) {
         return MaterialPageRoute<void>(
           settings: settings,
-          builder: (context) {
-            return _TabRoot(tab: tab);
-          },
+          builder: (_) => _TabRoot(tab: tab),
         );
       },
     );
@@ -87,92 +89,26 @@ class _TabRoot extends StatelessWidget {
         centerTitle: false,
       ),
       drawer: const _AppDrawer(),
-      body: _TabBody(tab: tab),
+      body: _resolveRoot(tab),
     );
   }
-}
 
-class _TabBody extends StatelessWidget {
-  const _TabBody({required this.tab});
-
-  final HomeTabSpec tab;
-
-  @override
-  Widget build(BuildContext context) {
-    // Map the tab spec to its root view. Deeper navigation is handled
-    // by the nested Navigator above (back button always available).
+  /// Returns the actual feature view for the tab root. No intermediate
+  /// "press Lihat" hint screens — taps on the bottom nav show the real
+  /// content immediately.
+  Widget _resolveRoot(HomeTabSpec tab) {
     switch (tab.route) {
       case AppRoutes.dashboard:
-        return const _DashboardHint();
+        return const DashboardView();
       case AppRoutes.medicines:
-        return const _NavigateHint(
-          title: 'Daftar Obat',
-          target: AppRoutes.medicines,
-        );
+        return const MedicineListView();
       case AppRoutes.stockMovements:
-        return const _NavigateHint(
-          title: 'Mutasi Stok',
-          target: AppRoutes.stockMovements,
-        );
+        return const StockMovementListView();
       case AppRoutes.profile:
-        return const _NavigateHint(
-          title: 'Profil',
-          target: AppRoutes.profile,
-        );
+        return const ProfileView();
       default:
         return Center(child: Text(tab.label));
     }
-  }
-}
-
-class _DashboardHint extends StatelessWidget {
-  const _DashboardHint();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Text(
-          'Tekan ikon menu (kiri atas) untuk membuka drawer, atau pilih tab '
-          'di bawah untuk berpindah fitur.',
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
-}
-
-class _NavigateHint extends StatelessWidget {
-  const _NavigateHint({required this.title, required this.target});
-
-  final String title;
-  final String target;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.touch_app_outlined, size: 56),
-            const SizedBox(height: 12),
-            Text(
-              'Buka $title',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: () => Get.toNamed<void>(target),
-              icon: const Icon(Icons.arrow_forward),
-              label: const Text('Lihat'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
@@ -350,15 +286,14 @@ class _DrawerItem extends StatelessWidget {
       title: Text(label),
       onTap: () {
         Navigator.of(context).pop();
-        // Switch to the relevant tab first so the bottom nav follows.
-        Get.offAllNamed<void>(
-          AppRoutes.home,
-          arguments: {'tab': tabIndex},
-        );
+        final shell = Get.find<HomeShellController>();
+        shell.changeTab(tabIndex);
         final target = navigateTo;
         if (target != null) {
-          // Push the destination on top of the shell so the user keeps
-          // the bottom nav and gets a back button in the AppBar.
+          // Push the destination on the root navigator so the user
+          // gets a back arrow in the AppBar; the bottom nav of the
+          // shell is hidden while on the pushed screen and reappears
+          // on pop.
           Get.toNamed<void>(target);
         }
       },
