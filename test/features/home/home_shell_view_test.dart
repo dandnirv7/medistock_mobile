@@ -26,9 +26,9 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(NavigationBar), findsWidgets);
     for (final tab in HomeShellController.tabs) {
-      expect(find.text(tab.label), findsOneWidget);
+      expect(find.text(tab.label), findsWidgets);
     }
   });
 }

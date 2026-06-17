@@ -8,18 +8,31 @@ import '../../auth/data/repositories/auth_repository.dart';
 import '../../auth/models/user_model.dart';
 import '../controllers/home_shell_controller.dart';
 
+/// Host shell with persistent bottom navigation. Each tab hosts a
+/// sub-navigator so pushing deeper screens keeps the back button while
+/// the bottom nav stays visible.
 class HomeShellView extends GetView<HomeShellController> {
   const HomeShellView({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
+      // Re-sync active tab when arguments arrive after build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.syncFromArguments();
+      });
       final index = controller.currentIndex.value;
-      final tab = HomeShellController.tabs[index];
       return Scaffold(
-        body: tab.route == AppRoutes.dashboard
-            ? const _DashboardBody()
-            : const _PlaceholderBody(title: 'Halaman dalam pengembangan'),
+        body: IndexedStack(
+          index: index,
+          children: [
+            for (int i = 0; i < HomeShellController.tabs.length; i++)
+              _TabNavigator(
+                tab: HomeShellController.tabs[i],
+                isActive: i == index,
+              ),
+          ],
+        ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: index,
           onDestinationSelected: controller.changeTab,
@@ -39,48 +52,124 @@ class HomeShellView extends GetView<HomeShellController> {
   }
 }
 
-class _DashboardBody extends StatelessWidget {
-  const _DashboardBody();
+class _TabNavigator extends StatelessWidget {
+  const _TabNavigator({required this.tab, required this.isActive});
+
+  final HomeTabSpec tab;
+  final bool isActive;
+
+  @override
+  Widget build(BuildContext context) {
+    return Navigator(
+      key: ValueKey('home-tab-${tab.index}'),
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (context) {
+            return _TabRoot(tab: tab);
+          },
+        );
+      },
+    );
+  }
+}
+
+class _TabRoot extends StatelessWidget {
+  const _TabRoot({required this.tab});
+
+  final HomeTabSpec tab;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MediStock'),
+        title: Text(tab.label),
         centerTitle: false,
       ),
       drawer: const _AppDrawer(),
-      body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Dashboard lengkap akan digenerate pada milestone M2.\n'
-            'Saat ini hanya shell (bottom nav + drawer) yang aktif.',
-            textAlign: TextAlign.center,
-          ),
+      body: _TabBody(tab: tab),
+    );
+  }
+}
+
+class _TabBody extends StatelessWidget {
+  const _TabBody({required this.tab});
+
+  final HomeTabSpec tab;
+
+  @override
+  Widget build(BuildContext context) {
+    // Map the tab spec to its root view. Deeper navigation is handled
+    // by the nested Navigator above (back button always available).
+    switch (tab.route) {
+      case AppRoutes.dashboard:
+        return const _DashboardHint();
+      case AppRoutes.medicines:
+        return const _NavigateHint(
+          title: 'Daftar Obat',
+          target: AppRoutes.medicines,
+        );
+      case AppRoutes.stockMovements:
+        return const _NavigateHint(
+          title: 'Mutasi Stok',
+          target: AppRoutes.stockMovements,
+        );
+      case AppRoutes.profile:
+        return const _NavigateHint(
+          title: 'Profil',
+          target: AppRoutes.profile,
+        );
+      default:
+        return Center(child: Text(tab.label));
+    }
+  }
+}
+
+class _DashboardHint extends StatelessWidget {
+  const _DashboardHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(24),
+        child: Text(
+          'Tekan ikon menu (kiri atas) untuk membuka drawer, atau pilih tab '
+          'di bawah untuk berpindah fitur.',
+          textAlign: TextAlign.center,
         ),
       ),
     );
   }
 }
 
-class _PlaceholderBody extends StatelessWidget {
-  const _PlaceholderBody({required this.title});
+class _NavigateHint extends StatelessWidget {
+  const _NavigateHint({required this.title, required this.target});
 
   final String title;
+  final String target;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      drawer: const _AppDrawer(),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            '$title\n\n(Isi lengkap di milestone berikutnya)',
-            textAlign: TextAlign.center,
-          ),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.touch_app_outlined, size: 56),
+            const SizedBox(height: 12),
+            Text(
+              'Buka $title',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: () => Get.toNamed<void>(target),
+              icon: const Icon(Icons.arrow_forward),
+              label: const Text('Lihat'),
+            ),
+          ],
         ),
       ),
     );
@@ -93,7 +182,6 @@ class _AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = Get.find<AuthSession>();
-    final authRepo = Get.find<AuthRepository>();
     final user = session.user;
 
     return Drawer(
@@ -101,7 +189,7 @@ class _AppDrawer extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _DrawerHeader(user: user, authRepo: authRepo),
+            _DrawerHeader(user: user),
             const Divider(height: 1),
             Expanded(
               child: ListView(
@@ -110,37 +198,41 @@ class _AppDrawer extends StatelessWidget {
                   _DrawerItem(
                     icon: Icons.dashboard_outlined,
                     label: 'Dashboard',
-                    route: AppRoutes.dashboard,
+                    tabIndex: 0,
                   ),
                   _DrawerItem(
                     icon: Icons.medication_outlined,
                     label: 'Data Obat',
-                    route: AppRoutes.medicines,
+                    tabIndex: 1,
                   ),
                   _DrawerItem(
                     icon: Icons.category_outlined,
                     label: 'Kategori',
-                    route: AppRoutes.categories,
+                    tabIndex: 1,
+                    navigateTo: AppRoutes.categories,
                   ),
                   _DrawerItem(
                     icon: Icons.local_shipping_outlined,
                     label: 'Supplier',
-                    route: AppRoutes.suppliers,
+                    tabIndex: 1,
+                    navigateTo: AppRoutes.suppliers,
                   ),
                   _DrawerItem(
                     icon: Icons.arrow_downward,
                     label: 'Stok Masuk',
-                    route: AppRoutes.stockIn,
+                    tabIndex: 2,
+                    navigateTo: AppRoutes.stockIn,
                   ),
                   _DrawerItem(
                     icon: Icons.arrow_upward,
                     label: 'Stok Keluar',
-                    route: AppRoutes.stockOut,
+                    tabIndex: 2,
+                    navigateTo: AppRoutes.stockOut,
                   ),
                   _DrawerItem(
                     icon: Icons.swap_horiz,
                     label: 'Mutasi Stok',
-                    route: AppRoutes.stockMovements,
+                    tabIndex: 2,
                   ),
                 ],
               ),
@@ -154,7 +246,9 @@ class _AppDrawer extends StatelessWidget {
               ),
               onTap: () async {
                 Navigator.of(context).pop();
-                await Get.toNamed<void>(AppRoutes.profile);
+                await Get.find<AuthRepository>().logout();
+                await Get.find<AuthSession>().clear();
+                Get.offAllNamed<void>(AppRoutes.login);
               },
             ),
           ],
@@ -165,10 +259,9 @@ class _AppDrawer extends StatelessWidget {
 }
 
 class _DrawerHeader extends StatelessWidget {
-  const _DrawerHeader({this.user, required this.authRepo});
+  const _DrawerHeader({this.user});
 
   final UserModel? user;
-  final AuthRepository authRepo;
 
   @override
   Widget build(BuildContext context) {
@@ -241,12 +334,14 @@ class _DrawerItem extends StatelessWidget {
   const _DrawerItem({
     required this.icon,
     required this.label,
-    required this.route,
+    required this.tabIndex,
+    this.navigateTo,
   });
 
   final IconData icon;
   final String label;
-  final String route;
+  final int tabIndex;
+  final String? navigateTo;
 
   @override
   Widget build(BuildContext context) {
@@ -255,7 +350,17 @@ class _DrawerItem extends StatelessWidget {
       title: Text(label),
       onTap: () {
         Navigator.of(context).pop();
-        Get.toNamed<void>(route);
+        // Switch to the relevant tab first so the bottom nav follows.
+        Get.offAllNamed<void>(
+          AppRoutes.home,
+          arguments: {'tab': tabIndex},
+        );
+        final target = navigateTo;
+        if (target != null) {
+          // Push the destination on top of the shell so the user keeps
+          // the bottom nav and gets a back button in the AppBar.
+          Get.toNamed<void>(target);
+        }
       },
     );
   }
