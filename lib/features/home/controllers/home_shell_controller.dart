@@ -4,9 +4,7 @@ import 'package:get/get.dart';
 import '../../../app/routes/app_routes.dart';
 
 class HomeShellController extends GetxController {
-  /// Active tab index (0..4). Hydrated from `Get.arguments['tab']` and
-  /// kept in sync with the current route when the user pushes deeper
-  /// screens and pops back.
+  /// Active tab index (0..4). Hydrated from `Get.arguments['tab']`.
   final RxInt currentIndex = 0.obs;
 
   static const List<HomeTabSpec> tabs = <HomeTabSpec>[
@@ -53,41 +51,61 @@ class HomeShellController extends GetxController {
     _readTabArgument();
   }
 
-  /// Called whenever the shell becomes visible (after returning from a
-  /// pushed route) so the active tab indicator matches the current
-  /// GetX route.
-  void syncFromCurrentRoute() {
-    final route = Get.currentRoute;
-    for (final tab in tabs) {
-      if (tab.route == route) {
-        if (currentIndex.value != tab.index) {
-          currentIndex.value = tab.index;
-        }
-        return;
-      }
-    }
-  }
-
   void _readTabArgument() {
     final args = Get.arguments;
     if (args is Map && args['tab'] is int) {
       final i = (args['tab'] as int).clamp(0, tabs.length - 1);
       currentIndex.value = i;
-    } else {
-      syncFromCurrentRoute();
     }
   }
 
-  /// Tap on a bottom nav destination. We push the tab's root route via
-  /// GetX so its `GetPage.binding` fires (registers the controller
-  /// lazily) and the view is fully wired. `Get.offAllNamed` clears
-  /// the navigation stack so the back button returns to the previous
-  /// logical destination rather than cycling through previously
-  /// selected tabs.
+  /// One Navigator per tab so each tab has its own route stack.
+  /// Switching tabs does not rebuild the navigator, so scroll/state
+  /// is preserved and the shell's appbar + bottom nav stay mounted
+  /// even when a sub-route is pushed on top.
+  static final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate(
+    tabs.length,
+    (_) => GlobalKey<NavigatorState>(),
+  );
+
+  static GlobalKey<NavigatorState> navigatorKeyFor(int index) =>
+      _navigatorKeys[index];
+
+  /// Tap on a bottom nav destination. Re-tapping the active tab pops
+  /// its nested stack back to root (standard iOS / Android bottom-nav
+  /// behaviour).
   void changeTab(int index) {
-    final tab = tabs[index];
-    currentIndex.value = tab.index;
-    Get.offAllNamed<void>(tab.route);
+    if (currentIndex.value == index) {
+      _navigatorKeys[index].currentState?.popUntil((r) => r.isFirst);
+      return;
+    }
+    currentIndex.value = index;
+  }
+
+  /// Build a Navigator for the given tab. The tab's root route is the
+  /// `home` page; sub-routes are resolved through the same GetX route
+  /// table (so `GetPage.binding` still fires).
+  Widget buildTabNavigator(int tabIndex) {
+    final tab = tabs[tabIndex];
+    return Navigator(
+      key: _navigatorKeys[tabIndex],
+      onGenerateRoute: (settings) {
+        if (settings.name == tab.route) {
+          return _rootRoute(settings, tab);
+        }
+        final page = Get.routeTree.matchRoute(settings.name ?? '').route;
+        if (page == null) return null;
+        return page as Route<dynamic>;
+      },
+    );
+  }
+
+  Route<dynamic> _rootRoute(RouteSettings settings, HomeTabSpec tab) {
+    final page = Get.routeTree.matchRoute(tab.route).route;
+    if (page == null) {
+      throw FlutterError('HomeShellController: tab root route not found: ${tab.route}');
+    }
+    return page as Route<dynamic>;
   }
 }
 
