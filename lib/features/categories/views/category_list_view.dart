@@ -52,13 +52,18 @@ class CategoryListView extends GetView<CategoryListController> {
                 onRefresh: controller.refresh,
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
-                  itemCount: controller.items.length,
+                  itemCount: controller.items.length + 1,
                   separatorBuilder: (_, _) => const SizedBox(height: 6),
                   itemBuilder: (context, i) {
+                    if (i == controller.items.length) {
+                      return _AddCategoryFooterCard(
+                        onTap: () => Get.toNamed(AppRoutes.categoryForm),
+                      );
+                    }
                     final c = controller.items[i];
                     return _CategoryTile(
                       category: c,
-                      onEdit: () => Get.toNamed(
+                      onTap: () => Get.toNamed(
                         AppRoutes.categoryForm,
                         arguments: c,
                       ),
@@ -92,12 +97,12 @@ class CategoryListView extends GetView<CategoryListController> {
 class _CategoryTile extends StatelessWidget {
   const _CategoryTile({
     required this.category,
-    required this.onEdit,
+    required this.onTap,
     required this.onDelete,
   });
 
   final CategoryModel category;
-  final VoidCallback onEdit;
+  final VoidCallback onTap;
   final VoidCallback onDelete;
 
   @override
@@ -147,17 +152,71 @@ class _CategoryTile extends StatelessWidget {
               ],
             ),
           ),
-          PopupMenuButton<String>(
-            onSelected: (v) {
-              if (v == 'edit') onEdit();
-              if (v == 'delete') onDelete();
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'edit', child: Text('Edit')),
-              PopupMenuItem(value: 'delete', child: Text('Hapus')),
-            ],
+          IconButton(
+            tooltip: 'Hapus',
+            onPressed: onDelete,
+            icon: const Icon(Icons.delete_outline, color: AppColors.danger),
           ),
+          const Icon(Icons.chevron_right, color: AppColors.textSecondary),
         ],
+      ),
+    );
+  }
+}
+
+
+class _AddCategoryFooterCard extends StatelessWidget {
+  const _AddCategoryFooterCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.add, color: AppColors.primary),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tambah Kategori Baru',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Buat kategori untuk pengelompokan obat',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+          ],
+        ),
       ),
     );
   }

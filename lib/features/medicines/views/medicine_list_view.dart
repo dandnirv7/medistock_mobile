@@ -1,19 +1,14 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
-import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_overlay.dart';
-import '../../../core/widgets/status_badge.dart';
 import '../controllers/medicine_list_controller.dart';
-import '../data/repositories/medicine_repository.dart';
+import '../data/repositories/medicine_repository.dart' show MedicineExpiredFilter;
 import '../models/medicine_model.dart';
 
 class MedicineListView extends GetView<MedicineListController> {
@@ -23,45 +18,23 @@ class MedicineListView extends GetView<MedicineListController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Daftar Obat'),
+        title: const Text('Obat'),
         actions: [
           IconButton(
-            tooltip: 'Kategori',
-            onPressed: () => Get.toNamed(AppRoutes.categories),
-            icon: const Icon(Icons.category_outlined),
+            tooltip: 'Cari',
+            onPressed: () => _openSearch(context),
+            icon: const Icon(Icons.search),
           ),
           IconButton(
-            tooltip: 'Supplier',
-            onPressed: () => Get.toNamed(AppRoutes.suppliers),
-            icon: const Icon(Icons.local_shipping_outlined),
+            tooltip: 'Filter',
+            onPressed: () => _openCategoryFilter(context),
+            icon: const Icon(Icons.tune),
           ),
         ],
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: TextField(
-              onChanged: (v) {
-                if (controller.search.value == v) return;
-                controller.search.value = v;
-                controller.fetch();
-              },
-              decoration: InputDecoration(
-                hintText: 'Cari nama / kode obat',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: Obx(
-                  () => controller.search.value.isEmpty
-                      ? const SizedBox.shrink()
-                      : IconButton(
-                          onPressed: () => controller.setSearch(''),
-                          icon: const Icon(Icons.close),
-                        ),
-                ),
-              ),
-            ),
-          ),
-          _FilterChips(),
+          _FilterChipRow(),
           const Divider(height: 1),
           Expanded(
             child: Obx(() {
@@ -72,104 +45,172 @@ class MedicineListView extends GetView<MedicineListController> {
                   controller.items.isEmpty) {
                 return ErrorView(
                   message: controller.errorMessage.value!,
-                  onRetry: controller.refresh,
+                  onRetry: controller.fetch,
                 );
               }
               if (controller.items.isEmpty) {
                 return const EmptyState(
                   icon: Icons.medication_outlined,
                   title: 'Belum ada obat',
-                  subtitle: 'Tambahkan obat dengan tombol + di bawah',
                 );
               }
               return RefreshIndicator(
-                onRefresh: controller.refresh,
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
-                  itemCount: controller.items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final m = controller.items[i];
-                    return _MedicineTile(
-                      medicine: m,
-                      onTap: () => Get.toNamed(
-                        AppRoutes.medicineDetail,
-                        parameters: {'id': m.id},
+                onRefresh: controller.fetch,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                      child: Row(
+                        children: [
+                          Obx(
+                            () => Text(
+                              'Total ${controller.total.value} obat',
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          const Text(
+                            'Urutkan',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const Icon(
+                            Icons.keyboard_arrow_down,
+                            color: AppColors.primary,
+                            size: 18,
+                          ),
+                        ],
                       ),
-                      onEdit: () => Get.toNamed(
-                        AppRoutes.medicineForm,
-                        arguments: m,
+                    ),
+                    Expanded(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
+                        itemCount: controller.items.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (context, i) => _MedicineCard(
+                          medicine: controller.items[i],
+                          onTap: () => Get.toNamed(
+                            AppRoutes.medicineDetail,
+                            parameters: {'id': controller.items[i].id},
+                          ),
+                        ),
                       ),
-                      onDelete: () => _confirmDelete(context, m),
-                    );
-                  },
+                    ),
+                  ],
                 ),
               );
             }),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'fab-medicine',
         onPressed: () => Get.toNamed(AppRoutes.medicineForm),
-        icon: const Icon(Icons.add),
-        label: const Text('Tambah Obat'),
+        backgroundColor: AppColors.primary,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, MedicineModel m) async {
-    final ok = await ConfirmDialog.show(
-      context,
-      title: 'Hapus obat?',
-      message: '${m.name} akan dihapus dari daftar.',
+  void _openSearch(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text('Cari obat'),
+          content: TextField(
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Nama atau kode obat',
+              prefixIcon: Icon(Icons.search),
+            ),
+            onChanged: (v) {
+              controller.search.value = v;
+              controller.fetch();
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
     );
-    if (ok) {
-      await controller.delete(m);
-    }
+  }
+
+  void _openCategoryFilter(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (_) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              ListTile(
+                title: const Text('Semua Kategori'),
+                onTap: () {
+                  controller.categoryFilter.value = null;
+                  controller.fetch();
+                  Navigator.of(context).pop();
+                },
+              ),
+              const Divider(height: 1),
+              // Categories are not loaded here; we expose only the
+              // "clear" affordance for now. Full category dropdown
+              // wiring happens in the form view.
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
-class _FilterChips extends StatelessWidget {
+class _FilterChipRow extends StatelessWidget {
+  MedicineListController get controller => Get.find<MedicineListController>();
   @override
   Widget build(BuildContext context) {
-    final c = Get.find<MedicineListController>();
     return SizedBox(
       height: 44,
       child: Obx(
         () => ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
           children: [
-            const SizedBox(width: 4),
-            _Chip(
+            _FilterChip(
               label: 'Semua',
-              selected: c.expiredFilter.value == MedicineExpiredFilter.all &&
-                  !c.lowStockOnly.value,
+              selected: !controller.lowStockOnly.value &&
+                  controller.expiredFilter.value ==
+                      MedicineExpiredFilter.all,
               onTap: () {
-                c.setExpiredFilter(MedicineExpiredFilter.all);
-                c.setLowStockOnly(false);
+                controller.lowStockOnly.value = false;
+                controller.setExpiredFilter(MedicineExpiredFilter.all);
               },
             ),
-            _Chip(
+            const SizedBox(width: 6),
+            _FilterChip(
+              label: 'Hampir Expired',
+              selected:
+                  controller.expiredFilter.value == MedicineExpiredFilter.soon,
+              onTap: () => controller
+                  .setExpiredFilter(MedicineExpiredFilter.soon),
+            ),
+            const SizedBox(width: 6),
+            _FilterChip(
               label: 'Stok Rendah',
-              selected: c.lowStockOnly.value,
-              onTap: () => c.setLowStockOnly(!c.lowStockOnly.value),
-            ),
-            _Chip(
-              label: 'Expired',
-              selected: c.expiredFilter.value == MedicineExpiredFilter.expired,
-              onTap: () => c
-                  .setExpiredFilter(MedicineExpiredFilter.expired),
-            ),
-            _Chip(
-              label: 'Segera Expired',
-              selected: c.expiredFilter.value == MedicineExpiredFilter.soon,
-              onTap: () => c.setExpiredFilter(MedicineExpiredFilter.soon),
-            ),
-            _Chip(
-              label: 'Aman',
-              selected: c.expiredFilter.value == MedicineExpiredFilter.safe,
-              onTap: () => c.setExpiredFilter(MedicineExpiredFilter.safe),
+              selected: controller.lowStockOnly.value,
+              onTap: () {
+                controller.lowStockOnly.value = !controller.lowStockOnly.value;
+                controller.fetch();
+              },
             ),
           ],
         ),
@@ -178,8 +219,8 @@ class _FilterChips extends StatelessWidget {
   }
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip({
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -191,151 +232,195 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) => onTap(),
-        selectedColor: AppColors.primaryLight,
-        labelStyle: TextStyle(
-          color: selected ? AppColors.primary : AppColors.textPrimary,
-          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.surface,
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.border,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : AppColors.textPrimary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
   }
 }
 
-class _MedicineTile extends StatelessWidget {
-  const _MedicineTile({
-    required this.medicine,
-    required this.onTap,
-    required this.onEdit,
-    required this.onDelete,
-  });
+class _MedicineCard extends StatelessWidget {
+  const _MedicineCard({required this.medicine, required this.onTap});
 
   final MedicineModel medicine;
   final VoidCallback onTap;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
+    final stock = medicine.stockStatus;
+    final expired = medicine.expiredStatus;
+    return InkWell(
+      onTap: onTap,
       borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _MedIcon(unit: medicine.unit),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(8),
+                  Text(
+                    medicine.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
                     ),
-                    child: const Icon(
-                      Icons.medication_outlined,
-                      color: AppColors.primary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    medicine.code,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          medicine.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      _StatusPill(
+                        label: medicine.unit.isEmpty ? 'Obat' : medicine.unit,
+                        color: AppColors.primary,
+                        bg: AppColors.primaryLight,
+                      ),
+                      if (stock != StockStatus.safe)
+                        _StatusPill(
+                          label: stock.label,
+                          color: stock == StockStatus.out
+                              ? AppColors.danger
+                              : AppColors.warning,
+                          bg: stock == StockStatus.out
+                              ? const Color(0xFFFFE7E7)
+                              : const Color(0xFFFFF4E5),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-          '${medicine.code} • ${medicine.categoryName ?? "Tanpa kategori"}',
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      if (expired == ExpiredStatus.expired ||
+                          expired == ExpiredStatus.soon)
+                        _StatusPill(
+                          label: 'Exp: ${_formatExpiry(medicine.expiredDate)}',
+                          color: expired == ExpiredStatus.expired
+                              ? AppColors.danger
+                              : AppColors.warning,
+                          bg: expired == ExpiredStatus.expired
+                              ? const Color(0xFFFFE7E7)
+                              : const Color(0xFFFFF4E5),
                         ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (v) {
-                      if (v == 'edit') onEdit();
-                      if (v == 'delete') onDelete();
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      PopupMenuItem(value: 'delete', child: Text('Hapus')),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  StockBadge(medicine: medicine),
-                  const SizedBox(width: 8),
-                  ExpiredBadge(medicine: medicine),
-                  const Spacer(),
-                  Text(
-                    'Stok: ${medicine.currentStock} ${medicine.unit}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                    ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${medicine.currentStock}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.payments_outlined,
-                      size: 14, color: AppColors.textSecondary),
-                  const SizedBox(width: 4),
-                  Text(
-                    CurrencyFormatter.format(medicine.sellingPrice),
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
+                ),
+                const Text(
+                  'Stok',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
                   ),
-                  const SizedBox(width: 12),
-                  Icon(Icons.calendar_today_outlined,
-                      size: 12, color: AppColors.textSecondary),
-                  const SizedBox(width: 4),
-                  Text(
-                    medicine.expiredDate == null
-                        ? 'Tidak ada tanggal'
-                        : DateFormatter.toDisplay(medicine.expiredDate!),
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatExpiry(DateTime? d) {
+    if (d == null) return '-';
+    return DateFormatter.toDisplayShort(d);
+  }
+}
+
+class _MedIcon extends StatelessWidget {
+  const _MedIcon({required this.unit});
+
+  final String unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final isTablet = unit.toLowerCase().contains('tablet') ||
+        unit.toLowerCase().contains('kaplet');
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(
+        isTablet ? Icons.medication : Icons.medical_services,
+        color: AppColors.primary,
+        size: 22,
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({
+    required this.label,
+    required this.color,
+    required this.bg,
+  });
+
+  final String label;
+  final Color color;
+  final Color bg;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
