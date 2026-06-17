@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
@@ -8,19 +11,31 @@ class SplashController extends GetxController {
       : _session = session ?? Get.find<AuthSession>();
 
   final AuthSession _session;
+  Timer? _timer;
 
   @override
   void onReady() {
     super.onReady();
-    _navigateAfterDelay();
+    debugPrint('[Splash] onReady fired, scheduling navigation');
+    _timer = Timer(const Duration(milliseconds: 1500), _navigate);
   }
 
-  Future<void> _navigateAfterDelay() async {
-    await Future<void>.delayed(const Duration(milliseconds: 1500));
+  @override
+  void onClose() {
+    _timer?.cancel();
+    _timer = null;
+    super.onClose();
+  }
+
+  void _navigate() {
+    if (!Get.isRegistered<GetMaterialController>()) return;
+    debugPrint(
+      '[Splash] navigating, isAuthenticated=${_session.isAuthenticated}',
+    );
     if (_session.isAuthenticated) {
-      Get.offAllNamed(AppRoutes.home);
+      Get.offAllNamed<void>(AppRoutes.home);
     } else {
-      Get.offAllNamed(AppRoutes.login);
+      Get.offAllNamed<void>(AppRoutes.login);
     }
   }
 }

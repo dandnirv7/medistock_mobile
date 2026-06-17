@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../medicines/models/medicine_model.dart';
+import '../../suppliers/models/supplier_model.dart';
 import '../controllers/stock_in_controller.dart';
 
 class StockInView extends GetView<StockInController> {
@@ -16,7 +18,7 @@ class StockInView extends GetView<StockInController> {
         return Form(
           key: controller.formKey,
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             children: [
               if (controller.errorMessage.value != null)
                 Container(
@@ -34,71 +36,48 @@ class StockInView extends GetView<StockInController> {
                     style: const TextStyle(color: AppColors.danger),
                   ),
                 ),
-              DropdownButtonFormField<String>(
-                initialValue: controller.medicineId.value,
-                items: controller.medicines
-                    .map(
-                      (m) => DropdownMenuItem(
-                        value: m.id,
-                        child: Text(
-                          '${m.code} - ${m.name}',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: controller.setMedicine,
-                decoration: const InputDecoration(
-                  labelText: 'Pilih Obat *',
-                ),
-                validator: (v) =>
-                    v == null ? 'Pilih obat terlebih dahulu' : null,
+              _LabeledField(
+                icon: Icons.medication_outlined,
+                child: _ObatDropdown(),
               ),
               if (controller.selectedMedicine != null) ...[
                 const SizedBox(height: 8),
                 _CurrentStockTile(medicine: controller.selectedMedicine!),
               ],
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: controller.quantityCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Jumlah'),
-                validator: controller.positiveInt,
+              const SizedBox(height: 14),
+              _LabeledField(
+                icon: Icons.local_shipping_outlined,
+                child: _SupplierDropdown(),
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: controller.supplierId.value,
-                items: [
-                  const DropdownMenuItem<String>(
-                    value: null,
-                    child: Text('Tanpa supplier'),
-                  ),
-                  ...controller.suppliers.map(
-                    (s) => DropdownMenuItem(
-                      value: s.id,
-                      child: Text(s.name),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: _LabeledField(
+                      icon: Icons.inventory_outlined,
+                      child: _QuantityField(),
                     ),
                   ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 1,
+                    child: _UnitField(unit: controller.selectedMedicine?.unit ?? ''),
+                  ),
                 ],
-                onChanged: controller.setSupplier,
-                decoration: const InputDecoration(labelText: 'Supplier'),
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: controller.dateCtrl,
-                readOnly: true,
-                onTap: () => _pickDate(context),
-                decoration: const InputDecoration(
-                  labelText: 'Tanggal',
-                  suffixIcon: Icon(Icons.calendar_today_outlined),
-                ),
+              const SizedBox(height: 14),
+              _LabeledField(
+                icon: Icons.calendar_today_outlined,
+                child: _DateField(),
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: controller.notesCtrl,
-                decoration: const InputDecoration(labelText: 'Catatan'),
-                maxLines: 2,
+              const SizedBox(height: 14),
+              _LabeledField(
+                icon: Icons.note_outlined,
+                child: _NotesField(),
               ),
+              const SizedBox(height: 20),
+              _SummaryCard(),
               const SizedBox(height: 24),
               Obx(
                 () => ElevatedButton.icon(
@@ -119,7 +98,7 @@ class StockInView extends GetView<StockInController> {
                         },
                   icon: const Icon(Icons.save_outlined),
                   label: Text(
-                    controller.isLoading.value ? 'Menyimpan…' : 'Simpan',
+                    controller.isLoading.value ? 'Menyimpan…' : 'Simpan Stok Masuk',
                   ),
                 ),
               ),
@@ -129,15 +108,250 @@ class StockInView extends GetView<StockInController> {
       }),
     );
   }
+}
 
-  Future<void> _pickDate(BuildContext context) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: controller.transactionDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+class _LabeledField extends StatelessWidget {
+  const _LabeledField({required this.icon, required this.child});
+
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 18),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: child),
+      ],
     );
-    if (picked != null) controller.setDate(picked);
+  }
+}
+
+class _ObatDropdown extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<StockInController>();
+    return DropdownButtonFormField<String>(
+      initialValue: c.medicineId.value,
+      isExpanded: true,
+      items: c.medicines
+          .map(
+            (m) => DropdownMenuItem(
+              value: m.id,
+              child: Text(
+                m.name,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          )
+          .toList(),
+      onChanged: c.setMedicine,
+      decoration: const InputDecoration(labelText: 'Obat'),
+      validator: (v) => v == null ? 'Pilih obat terlebih dahulu' : null,
+    );
+  }
+}
+
+class _SupplierDropdown extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<StockInController>();
+    return DropdownButtonFormField<String?>(
+      initialValue: c.supplierId.value,
+      isExpanded: true,
+      items: [
+        const DropdownMenuItem<String?>(
+          value: null,
+          child: Text('Tanpa supplier'),
+        ),
+        ...c.suppliers.map(
+          (SupplierModel s) => DropdownMenuItem<String?>(
+            value: s.id,
+            child: Text(s.name, overflow: TextOverflow.ellipsis),
+          ),
+        ),
+      ],
+      onChanged: c.setSupplier,
+      decoration: const InputDecoration(labelText: 'Supplier'),
+    );
+  }
+}
+
+class _QuantityField extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<StockInController>();
+    return TextFormField(
+      controller: c.quantityCtrl,
+      keyboardType: TextInputType.number,
+      decoration: const InputDecoration(labelText: 'Jumlah'),
+      validator: c.positiveInt,
+    );
+  }
+}
+
+class _UnitField extends StatelessWidget {
+  const _UnitField({required this.unit});
+  final String unit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 56,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Text(
+        unit.isEmpty ? '-' : unit,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+class _DateField extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<StockInController>();
+    return TextFormField(
+      controller: c.dateCtrl,
+      readOnly: true,
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: c.transactionDate,
+          firstDate: DateTime(2000),
+          lastDate: DateTime(2100),
+        );
+        if (picked != null) c.setDate(picked);
+      },
+      decoration: const InputDecoration(labelText: 'Tanggal Transaksi'),
+    );
+  }
+}
+
+class _NotesField extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<StockInController>();
+    return TextFormField(
+      controller: c.notesCtrl,
+      decoration: const InputDecoration(labelText: 'Catatan'),
+      maxLines: 2,
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<StockInController>();
+    return Obx(() {
+      final med = c.selectedMedicine;
+      SupplierModel? supplier;
+      for (final s in c.suppliers) {
+        if (s.id == c.supplierId.value) {
+          supplier = s;
+          break;
+        }
+      }
+      final qty = int.tryParse(c.quantityCtrl.text) ?? 0;
+      final price = med?.purchasePrice ?? 0;
+      final total = price * qty;
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.primaryLight,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Ringkasan Transaksi',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _SummaryRow('Obat', med?.name ?? '-'),
+            _SummaryRow('Supplier', supplier?.name ?? 'Tanpa supplier'),
+            _SummaryRow('Jumlah', qty > 0 ? '$qty ${med?.unit ?? ''}'.trim() : '-'),
+            _SummaryRow('Harga Beli Satuan', CurrencyFormatter.format(price)),
+            const Divider(height: 16),
+            _SummaryRow(
+              'Total Nilai',
+              CurrencyFormatter.format(total),
+              highlight: true,
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow(this.label, this.value, {this.highlight = false});
+
+  final String label;
+  final String value;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                color: highlight ? AppColors.primaryDark : AppColors.textPrimary,
+                fontWeight:
+                    highlight ? FontWeight.w800 : FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

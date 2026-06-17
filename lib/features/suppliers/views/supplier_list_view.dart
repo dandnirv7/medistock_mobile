@@ -148,17 +148,61 @@ class _SupplierTile extends StatelessWidget {
               ],
             ),
           ),
-          PopupMenuButton<String>(
-            onSelected: (v) {
-              if (v == 'edit') onEdit();
-              if (v == 'delete') onDelete();
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'edit', child: Text('Edit')),
-              PopupMenuItem(value: 'delete', child: Text('Hapus')),
+          Wrap(
+            spacing: 4,
+            children: [
+              _CircleIconButton(
+                icon: Icons.call_outlined,
+                onTap: () {
+                  if (supplier.phone != null && supplier.phone!.isNotEmpty) {
+                    Get.snackbar(
+                      'Telepon',
+                      supplier.phone!,
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                  }
+                },
+              ),
+              _CircleIconButton(
+                icon: Icons.message_outlined,
+                onTap: () {
+                  if (supplier.phone != null && supplier.phone!.isNotEmpty) {
+                    Get.snackbar(
+                      'WhatsApp',
+                      supplier.phone!,
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                  }
+                },
+              ),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+class _CircleIconButton extends StatelessWidget {
+  const _CircleIconButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: AppColors.primaryLight,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: AppColors.primary, size: 18),
       ),
     );
   }

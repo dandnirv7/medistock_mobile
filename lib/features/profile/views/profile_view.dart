@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../app/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../auth/models/user_model.dart';
@@ -27,42 +26,65 @@ class _Body extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = controller.session;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        Obx(() {
-          final user = session.userRx.value;
-          return _UserHeader(user: user);
-        }),
-        const SizedBox(height: 16),
-        _MenuTile(
-          icon: Icons.medication_outlined,
-          title: 'Kelola Obat',
-          onTap: () => _safeNavigate(AppRoutes.medicines),
+        Obx(() => _ProfileHeader(user: session.userRx.value)),
+        const SizedBox(height: 24),
+        _SectionTile(
+          icon: Icons.account_circle_outlined,
+          title: 'Informasi Akun',
+          subtitle: 'Lihat dan kelola informasi akun Anda',
+          onTap: () {
+            Get.snackbar(
+              'Segera Hadir',
+              'Detail informasi akun akan tersedia di rilis berikutnya.',
+              snackPosition: SnackPosition.BOTTOM,
+            );
+          },
         ),
-        _MenuTile(
-          icon: Icons.category_outlined,
-          title: 'Kelola Kategori',
-          onTap: () => _safeNavigate(AppRoutes.categories),
+        _SectionTile(
+          icon: Icons.settings_outlined,
+          title: 'Pengaturan Aplikasi',
+          subtitle: 'Tema, notifikasi, dan preferensi lainnya',
+          onTap: () {
+            Get.snackbar(
+              'Segera Hadir',
+              'Pengaturan aplikasi akan tersedia di rilis berikutnya.',
+              snackPosition: SnackPosition.BOTTOM,
+            );
+          },
         ),
-        _MenuTile(
-          icon: Icons.local_shipping_outlined,
-          title: 'Kelola Supplier',
-          onTap: () => _safeNavigate(AppRoutes.suppliers),
+        _SectionTile(
+          icon: Icons.shield_outlined,
+          title: 'Keamanan',
+          subtitle: 'Ubah password dan keamanan akun',
+          onTap: () {
+            Get.snackbar(
+              'Segera Hadir',
+              'Pengaturan keamanan akan tersedia di rilis berikutnya.',
+              snackPosition: SnackPosition.BOTTOM,
+            );
+          },
         ),
-        _MenuTile(
-          icon: Icons.history,
-          title: 'Riwayat Mutasi',
-          onTap: () => _safeNavigate(AppRoutes.stockMovements),
-        ),
-        _MenuTile(
-          icon: Icons.notifications_outlined,
-          title: 'Alert',
-          onTap: () => _safeNavigate(AppRoutes.alerts),
+        _SectionTile(
+          icon: Icons.info_outline,
+          title: 'Tentang Aplikasi',
+          subtitle: 'Versi 1.0.0',
+          onTap: () {
+            Get.snackbar(
+              'Tentang Aplikasi',
+              'MediStock Inventory v1.0.0\nKelola Stok Obat dengan Mudah, Aman, dan Terpercaya.',
+              snackPosition: SnackPosition.BOTTOM,
+              duration: const Duration(seconds: 3),
+            );
+          },
         ),
         const SizedBox(height: 24),
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.danger,
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.danger,
+            side: const BorderSide(color: AppColors.danger),
+            minimumSize: const Size.fromHeight(48),
           ),
           onPressed: () => _confirmLogout(context),
           icon: const Icon(Icons.logout),
@@ -70,20 +92,6 @@ class _Body extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  void _safeNavigate(String route) {
-    try {
-      Get.toNamed(route);
-    } catch (e) {
-      // Surface as a snackbar so the user gets feedback instead of a silent crash.
-      Get.snackbar(
-        'Navigasi gagal',
-        e.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-        margin: const EdgeInsets.all(16),
-      );
-    }
   }
 
   Future<void> _confirmLogout(BuildContext context) async {
@@ -101,14 +109,14 @@ class _Body extends StatelessWidget {
         'Logout gagal',
         e.toString(),
         snackPosition: SnackPosition.BOTTOM,
-        margin: const EdgeInsets.all(16),
       );
     }
   }
 }
 
-class _UserHeader extends StatelessWidget {
-  const _UserHeader({required this.user});
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.user});
+
   final UserModel? user;
 
   @override
@@ -117,94 +125,116 @@ class _UserHeader extends StatelessWidget {
             ? user!.name[0]
             : 'A')
         .toUpperCase();
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: AppColors.primaryLight,
-            child: Text(
-              initial,
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-                fontSize: 20,
-              ),
+    final role = user?.role ?? 'USER';
+    return Column(
+      children: [
+        Container(
+          width: 96,
+          height: 96,
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.primary, width: 2),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            initial,
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w800,
+              fontSize: 36,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user?.name ?? 'Admin',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '@${user?.username ?? "-"}',
-                  style: const TextStyle(color: AppColors.textSecondary),
-                ),
-                if (user?.email != null)
-                  Text(
-                    user!.email!,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-              ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          user?.name ?? 'Admin Apotek',
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        if (user?.email != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            user!.email!,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
             ),
           ),
         ],
-      ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.primary),
+          ),
+          child: Text(
+            role,
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _MenuTile extends StatelessWidget {
-  const _MenuTile({
+class _SectionTile extends StatelessWidget {
+  const _SectionTile({
     required this.icon,
     required this.title,
+    required this.subtitle,
     required this.onTap,
   });
 
   final IconData icon;
   final String title;
+  final String subtitle;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         leading: Container(
-          width: 36,
-          height: 36,
+          width: 40,
+          height: 40,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: AppColors.primaryLight,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: AppColors.primary, size: 20),
+          child: Icon(icon, color: AppColors.primary),
         ),
-        title: Text(title),
-        trailing: const Icon(Icons.chevron_right),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+          ),
+        ),
+        trailing: const Icon(
+          Icons.chevron_right,
+          color: AppColors.textSecondary,
+        ),
         onTap: onTap,
       ),
     );
