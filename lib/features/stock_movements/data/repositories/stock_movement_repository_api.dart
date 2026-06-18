@@ -69,7 +69,7 @@ class StockMovementRepositoryApi implements StockMovementRepository {
       data: {
         'medicineId': medicineId,
         'quantity': quantity,
-        'reason': reasonLabel ?? 'SALE',
+        'reason': reasonLabel,
         if (transactionDate != null) 'transactionDate': transactionDate.toIso8601String().split('T').first,
         if (notes != null) 'notes': notes,
       },

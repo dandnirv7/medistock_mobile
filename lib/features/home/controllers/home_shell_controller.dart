@@ -2,53 +2,90 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../../../core/storage/auth_session.dart';
+import '../../auth/models/user_model.dart';
+import '../../dashboard/bindings/dashboard_binding.dart';
+import '../../dashboard/views/dashboard_view.dart';
+import '../../medicines/bindings/medicine_binding.dart';
+import '../../medicines/views/medicine_list_view.dart';
+import '../../profile/bindings/profile_binding.dart';
+import '../../profile/views/profile_view.dart';
+import '../../stock_movements/bindings/stock_movement_binding.dart';
+import '../../stock_movements/views/stock_level_view.dart';
+import '../../stock_movements/views/stock_movement_list_view.dart';
 
 class HomeShellController extends GetxController {
-  /// Active tab index (0..4). Hydrated from `Get.arguments['tab']`.
+  /// Active tab index within the role-filtered `tabs` list.
   final RxInt currentIndex = 0.obs;
 
-  static const List<HomeTabSpec> tabs = <HomeTabSpec>[
-    HomeTabSpec(
-      label: 'Dashboard',
-      icon: Icons.dashboard_outlined,
-      activeIcon: Icons.dashboard,
-      route: AppRoutes.dashboard,
-      index: 0,
-    ),
-    HomeTabSpec(
-      label: 'Obat',
-      icon: Icons.medication_outlined,
-      activeIcon: Icons.medication,
-      route: AppRoutes.medicines,
-      index: 1,
-    ),
-    HomeTabSpec(
-      label: 'Stok',
-      icon: Icons.inventory_2_outlined,
-      activeIcon: Icons.inventory_2,
-      route: AppRoutes.stockMovements,
-      index: 2,
-    ),
-    HomeTabSpec(
-      label: 'Riwayat',
-      icon: Icons.history_outlined,
-      activeIcon: Icons.history,
-      route: AppRoutes.stockMovements,
-      index: 3,
-    ),
-    HomeTabSpec(
-      label: 'Profil',
-      icon: Icons.person_outline,
-      activeIcon: Icons.person,
-      route: AppRoutes.profile,
-      index: 4,
-    ),
-  ];
+  /// Tabs visible to the current user. Recomputed when the session
+  /// changes (login/logout). Admin sees the master-data tab; staff
+  /// does not.
+  final RxList<HomeTabSpec> tabs = <HomeTabSpec>[].obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _rebuildTabs();
+    if (Get.isRegistered<AuthSession>()) {
+      ever<UserModel?>(Get.find<AuthSession>().userRx, (_) {
+        _rebuildTabs();
+      });
+    }
+  }
 
   @override
   void onReady() {
     super.onReady();
     _readTabArgument();
+  }
+
+  void _rebuildTabs() {
+    final isAdmin = Get.isRegistered<AuthSession>()
+        ? Get.find<AuthSession>().isAdmin
+        : true;
+    final list = <HomeTabSpec>[
+      const HomeTabSpec(
+        label: 'Dashboard',
+        icon: Icons.dashboard_outlined,
+        activeIcon: Icons.dashboard,
+        route: AppRoutes.dashboard,
+        index: 0,
+      ),
+      if (isAdmin)
+        const HomeTabSpec(
+          label: 'Obat',
+          icon: Icons.medication_outlined,
+          activeIcon: Icons.medication,
+          route: AppRoutes.medicines,
+          index: 1,
+        ),
+      const HomeTabSpec(
+        label: 'Stok',
+        icon: Icons.inventory_2_outlined,
+        activeIcon: Icons.inventory_2,
+        route: AppRoutes.stockLevels,
+        index: 2,
+      ),
+      const HomeTabSpec(
+        label: 'Riwayat',
+        icon: Icons.history_outlined,
+        activeIcon: Icons.history,
+        route: AppRoutes.stockMovements,
+        index: 3,
+      ),
+      const HomeTabSpec(
+        label: 'Profil',
+        icon: Icons.person_outline,
+        activeIcon: Icons.person,
+        route: AppRoutes.profile,
+        index: 4,
+      ),
+    ];
+    tabs.assignAll(list);
+    if (currentIndex.value >= list.length) {
+      currentIndex.value = 0;
+    }
   }
 
   void _readTabArgument() {
@@ -59,53 +96,69 @@ class HomeShellController extends GetxController {
     }
   }
 
-  /// One Navigator per tab so each tab has its own route stack.
-  /// Switching tabs does not rebuild the navigator, so scroll/state
-  /// is preserved and the shell's appbar + bottom nav stay mounted
-  /// even when a sub-route is pushed on top.
-  static final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate(
-    tabs.length,
-    (_) => GlobalKey<NavigatorState>(),
-  );
-
-  static GlobalKey<NavigatorState> navigatorKeyFor(int index) =>
-      _navigatorKeys[index];
-
-  /// Tap on a bottom nav destination. Re-tapping the active tab pops
-  /// its nested stack back to root (standard iOS / Android bottom-nav
-  /// behaviour).
+  /// Switch the active tab. Re-tapping the active tab is a no-op now
+  /// (the shell uses a single Navigator, so there is no per-tab
+  /// stack to pop). Sub-routes pushed via `Get.toNamed(...)` will
+  /// still appear above the shell and the system back button will
+  /// pop them.
   void changeTab(int index) {
-    if (currentIndex.value == index) {
-      _navigatorKeys[index].currentState?.popUntil((r) => r.isFirst);
-      return;
-    }
+    if (index < 0 || index >= tabs.length) return;
     currentIndex.value = index;
   }
 
-  /// Build a Navigator for the given tab. The tab's root route is the
-  /// `home` page; sub-routes are resolved through the same GetX route
-  /// table (so `GetPage.binding` still fires).
-  Widget buildTabNavigator(int tabIndex) {
-    final tab = tabs[tabIndex];
-    return Navigator(
-      key: _navigatorKeys[tabIndex],
-      onGenerateRoute: (settings) {
-        if (settings.name == tab.route) {
-          return _rootRoute(settings, tab);
-        }
-        final page = Get.routeTree.matchRoute(settings.name ?? '').route;
-        if (page == null) return null;
-        return page as Route<dynamic>;
-      },
-    );
+  /// Tracks which tab bindings have been fired in this shell lifetime
+  /// so we don't call `dependencies()` more than once per tab. The
+  /// bindings themselves use `Get.lazyPut(..., fenix: true)`, so even
+  /// repeated calls are harmless, but skipping the second call saves
+  /// work and keeps the call log clean.
+  final Set<String> _firedBindings = <String>{};
+
+  /// Build the root widget for a tab. The shell no longer routes
+  /// through `GetMaterialApp`'s Navigator, so each `GetPage.binding`
+  /// is fired manually here before the view is returned. The
+  /// `IndexedStack` keeps the returned widget alive across tab
+  /// switches, so the binding fires at most once per tab per shell
+  /// mount.
+  Widget buildTabRoot(int tabIndex) {
+    if (tabIndex < 0 || tabIndex >= tabs.length) {
+      return const SizedBox.shrink();
+    }
+    final route = tabs[tabIndex].route;
+    _ensureBinding(route);
+    switch (route) {
+      case AppRoutes.dashboard:
+        return const DashboardView();
+      case AppRoutes.medicines:
+        return const MedicineListView();
+      case AppRoutes.stockLevels:
+        return const StockLevelView();
+      case AppRoutes.stockMovements:
+        return const StockMovementListView();
+      case AppRoutes.profile:
+        return const ProfileView();
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
-  Route<dynamic> _rootRoute(RouteSettings settings, HomeTabSpec tab) {
-    final page = Get.routeTree.matchRoute(tab.route).route;
-    if (page == null) {
-      throw FlutterError('HomeShellController: tab root route not found: ${tab.route}');
+  void _ensureBinding(String route) {
+    if (_firedBindings.contains(route)) return;
+    _firedBindings.add(route);
+    switch (route) {
+      case AppRoutes.dashboard:
+        DashboardBinding().dependencies();
+        break;
+      case AppRoutes.medicines:
+      case AppRoutes.stockLevels:
+        MedicineBinding().dependencies();
+        break;
+      case AppRoutes.stockMovements:
+        StockMovementBinding().dependencies();
+        break;
+      case AppRoutes.profile:
+        ProfileBinding().dependencies();
+        break;
     }
-    return page as Route<dynamic>;
   }
 }
 

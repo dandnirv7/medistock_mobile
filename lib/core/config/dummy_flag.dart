@@ -1,5 +1,5 @@
 const bool kUseDummyData =
-    bool.fromEnvironment('USE_DUMMY', defaultValue: true);
+    bool.fromEnvironment('USE_DUMMY', defaultValue: false);
 
 const String kApiBaseUrl = String.fromEnvironment(
   'API_BASE',

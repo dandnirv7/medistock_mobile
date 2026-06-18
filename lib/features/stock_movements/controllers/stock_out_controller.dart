@@ -39,12 +39,22 @@ class StockOutController extends GetxController {
     super.onClose();
   }
 
-  Future<void> _loadMedicines() async {
+  /// Fetch medicines for the picker dropdown.
+  ///
+  /// Skipped when the list is already populated, so navigating away and
+  /// back to the StockOut screen does not re-hit the API. Pass
+  /// [force] = true to bypass the cache — used after a successful
+  /// stock-out so the picker reflects the new stock levels.
+  Future<void> _loadMedicines({bool force = false}) async {
+    if (!force && medicines.isNotEmpty) return;
     if (!Get.isRegistered<MedicineRepository>()) return;
     final repo = Get.find<MedicineRepository>();
     final res = await repo.getAll(query: MedicineQuery(limit: 100));
     medicines.assignAll(res.items);
   }
+
+  /// Public wrapper so views can trigger a pull-to-refresh style reload.
+  Future<void> refreshMedicines() => _loadMedicines(force: true);
 
   void setMedicine(String? id) {
     medicineId.value = id;
@@ -102,6 +112,9 @@ class StockOutController extends GetxController {
         reasonLabel: reason.value.apiValue,
         notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
       );
+      // Successful write — refresh the lookup list so the picker shows
+      // the updated stock levels on next open.
+      await _loadMedicines(force: true);
       return true;
     } catch (e) {
       errorMessage.value = e.toString();

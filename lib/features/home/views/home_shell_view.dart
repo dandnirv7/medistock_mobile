@@ -9,15 +9,13 @@ import '../../auth/models/user_model.dart';
 import '../controllers/home_shell_controller.dart';
 
 /// Persistent host shell. Renders an appbar, drawer, and bottom nav
-/// around an IndexedStack of per-tab Navigators. Sub-routes pushed
-/// from inside a tab (e.g. Category, Supplier, Stok In/Out) stay
-/// inside that tab's nested Navigator, so:
+/// around an IndexedStack of per-tab root views. Sub-routes pushed
+/// from inside a tab (e.g. Category, Supplier, Stok In/Out) are
+/// pushed via `Get.toNamed(...)` on the root Navigator, so the back
+/// button returns to the tab root with the shell still mounted.
 ///
-///  * the shell (appbar + bottom nav) stays mounted,
-///  * the back button returns to the tab root instead of exiting the app,
-///  * scroll/state in the tab root is preserved when the user pops
-///    back from a sub-route,
-///  * switching tabs is O(1) and does not refire API calls.
+/// All tab roots are mounted eagerly (one widget each), so switching
+/// tabs is O(1) and does not refire API calls.
 class HomeShellView extends GetView<HomeShellController> {
   const HomeShellView({super.key});
 
@@ -25,7 +23,7 @@ class HomeShellView extends GetView<HomeShellController> {
   Widget build(BuildContext context) {
     return Obx(() {
       final index = controller.currentIndex.value;
-      final tab = HomeShellController.tabs[index];
+      final tab = controller.tabs[index];
       return Scaffold(
         appBar: AppBar(
           title: Text(tab.label),
@@ -35,8 +33,8 @@ class HomeShellView extends GetView<HomeShellController> {
         body: IndexedStack(
           index: index,
           children: [
-            for (var i = 0; i < HomeShellController.tabs.length; i++)
-              _TabNavigatorHost(tabIndex: i),
+            for (var i = 0; i < controller.tabs.length; i++)
+              _TabRootView(tabIndex: i),
           ],
         ),
         bottomNavigationBar: NavigationBar(
@@ -45,7 +43,7 @@ class HomeShellView extends GetView<HomeShellController> {
           backgroundColor: AppColors.surface,
           indicatorColor: AppColors.primaryLight,
           destinations: [
-            for (final t in HomeShellController.tabs)
+            for (final t in controller.tabs)
               NavigationDestination(
                 icon: Icon(t.icon),
                 selectedIcon: Icon(t.activeIcon),
@@ -58,18 +56,22 @@ class HomeShellView extends GetView<HomeShellController> {
   }
 }
 
-/// Thin wrapper that asks the controller for a tab-scoped Navigator.
-/// The actual root view is resolved through GetX's route table so each
-/// tab's `GetPage.binding` still fires lazily on first build.
-class _TabNavigatorHost extends StatelessWidget {
-  const _TabNavigatorHost({required this.tabIndex});
+/// Mounts the root view for the tab at [tabIndex]. Using a wrapper
+/// keeps the IndexedStack children list stable (one child per tab) so
+/// switching tabs does not rebuild widget identities and refire
+/// fetches. Bindings still fire lazily because each tab's binding
+/// resolves when the tab root view is first built — and since the
+/// IndexedStack keeps every tab mounted, that happens once per tab
+/// per shell mount.
+class _TabRootView extends StatelessWidget {
+  const _TabRootView({required this.tabIndex});
 
   final int tabIndex;
 
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<HomeShellController>();
-    return controller.buildTabNavigator(tabIndex);
+    return controller.buildTabRoot(tabIndex);
   }
 }
 
@@ -163,7 +165,7 @@ class _DrawerHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = user?.name ?? 'MediStock';
-    final role = user?.role ?? 'User';
+    final role = user?.userRole.label ?? 'User';
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
       decoration: const BoxDecoration(
@@ -208,16 +210,16 @@ class _DrawerHeader extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
+            style: TextStyle(
+              color: AppColors.primaryDark,
+              fontWeight: FontWeight.w700,
               fontSize: 14,
             ),
           ),
           Text(
             role,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.85),
+            style: const TextStyle(
+              color: AppColors.primaryDark,
               fontSize: 12,
             ),
           ),
@@ -251,14 +253,11 @@ class _DrawerItem extends StatelessWidget {
         shell.changeTab(tabIndex);
         final target = navigateTo;
         if (target != null) {
-          // Defer the push so the IndexedStack can swap to the new tab
-          // first; the push then lands on that tab's nested Navigator
-          // so the back button returns to the tab root with the shell
-          // still mounted.
+          // Push the sub-route on the root Navigator (handled by
+          // GetMaterialApp). Switching tabs first ensures the
+          // sub-route is opened on top of the right tab root.
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            final navState = HomeShellController.navigatorKeyFor(tabIndex)
-                .currentState;
-            navState?.pushNamed(target);
+            Get.toNamed<void>(target);
           });
         }
       },

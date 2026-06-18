@@ -29,6 +29,7 @@ class StockInController extends GetxController {
   void onInit() {
     super.onInit();
     dateCtrl.text = _formatDate(transactionDate);
+    // First load only — subsequent opens read from the cached lists.
     _loadLookups();
   }
 
@@ -40,7 +41,18 @@ class StockInController extends GetxController {
     super.onClose();
   }
 
-  Future<void> _loadLookups() async {
+  /// Fetch medicines + suppliers for the lookup dropdowns.
+  ///
+  /// Skipped when both lists already have data, so navigating away and
+  /// back to the StockIn screen does not re-hit the API. Pass
+  /// [force] = true to bypass the cache — used after a successful
+  /// stock-in so the picker reflects the new stock levels.
+  Future<void> _loadLookups({bool force = false}) async {
+    if (!force &&
+        medicines.isNotEmpty &&
+        suppliers.isNotEmpty) {
+      return;
+    }
     if (Get.isRegistered<MedicineRepository>()) {
       final repo = Get.find<MedicineRepository>();
       final res = await repo.getAll(query: MedicineQuery(limit: 100));
@@ -52,6 +64,9 @@ class StockInController extends GetxController {
       suppliers.assignAll(res.items);
     }
   }
+
+  /// Public wrapper so views can trigger a pull-to-refresh style reload.
+  Future<void> refreshLookups() => _loadLookups(force: true);
 
   void setMedicine(String? id) {
     medicineId.value = id;
@@ -105,6 +120,9 @@ class StockInController extends GetxController {
         transactionDate: transactionDate,
         notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
       );
+      // Successful write — refresh the lookup list so the picker shows
+      // the updated stock levels on next open.
+      await _loadLookups(force: true);
       return true;
     } catch (e) {
       errorMessage.value = e.toString();

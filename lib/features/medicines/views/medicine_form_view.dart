@@ -11,9 +11,9 @@ class MedicineFormView extends GetView<MedicineFormController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Obx(() => Text(
-              controller.editing == null ? 'Tambah Obat' : 'Edit Obat',
-            )),
+        title: Text(
+          controller.editing == null ? 'Tambah Obat' : 'Edit Obat',
+        ),
       ),
       body: Obx(() {
         if (controller.isLoading.value) {

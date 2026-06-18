@@ -1,16 +1,41 @@
+import 'dart:io' show Platform;
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-import '../config/dummy_flag.dart';
 import '../storage/secure_storage_service.dart';
 import 'api_exception.dart';
+
+/// Resolves the API base URL at runtime so the same binary works on
+/// Android emulator (10.0.2.2) and Linux/Windows/macOS desktop (127.0.0.1).
+///
+/// Precedence:
+///   1. `API_BASE` set explicitly via --dart-define (always wins)
+///   2. Android  -> http://10.0.2.2:3000/api/v1
+///   3. Desktop -> http://127.0.0.1:3000/api/v1
+///   4. Other   -> http://localhost:3000/api/v1
+String _resolveBaseUrl() {
+  const explicit = String.fromEnvironment('API_BASE', defaultValue: '');
+  if (explicit.isNotEmpty) return explicit;
+
+  // kIsWeb is the only platform branch that dart:io can't answer; default
+  // to localhost which works for Chrome when the API is reverse-proxied.
+  if (kIsWeb) return 'http://localhost:3000/api/v1';
+
+  try {
+    if (Platform.isAndroid) return 'http://10.0.2.2:3000/api/v1';
+  } catch (_) {
+    // Platform may not be available in some test harnesses; fall through.
+  }
+  return 'http://127.0.0.1:3000/api/v1';
+}
 
 class ApiClient {
   ApiClient({required SecureStorageService storage})
       : _storage = storage,
         _dio = Dio(
           BaseOptions(
-            baseUrl: kApiBaseUrl,
+            baseUrl: _resolveBaseUrl(),
             connectTimeout: const Duration(seconds: 15),
             receiveTimeout: const Duration(seconds: 15),
             headers: {'Content-Type': 'application/json'},
@@ -27,6 +52,11 @@ class ApiClient {
   final SecureStorageService _storage;
 
   Dio get raw => _dio;
+
+  /// The base URL this client was constructed with. Exposed so startup
+  /// diagnostics (see `main.dart`) can log which endpoint is in use
+  /// without re-running the platform-aware resolver.
+  String get resolvedBaseUrl => _dio.options.baseUrl;
 
   Interceptor _buildAuthInterceptor() {
     return InterceptorsWrapper(
