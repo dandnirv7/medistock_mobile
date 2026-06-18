@@ -40,20 +40,33 @@ parallel **in-memory dummy data** layer for offline development and demos.
 flutter pub get
 ```
 
-### Run (dev, dummy data, no backend)
+### Run (dev, real backend — default)
+The default mode talks to the NestJS backend in `medistock-api/`. Make sure
+the API is running locally on port 3000 (see its README) before launching
+the app.
+
+```sh
+# Android emulator (10.0.2.2 is the loopback alias to the host)
+flutter run
+# — uses API_BASE=http://10.0.2.2:3000/api/v1 by default —
+
+# Physical device on the same Wi-Fi: pass your host LAN IP
+flutter run --dart-define=API_BASE=http://192.168.1.10:3000/api/v1
+```
+
+Login with the credentials seeded by the backend (default: `admin` / `admin123`,
+see `medistock-api` README).
+
+### Run (offline demo, no backend)
+For UI demos without a running API, switch to the in-memory dummy layer
+(uses `lib/features/<x>/data/repositories/<x>_repository_dummy.dart`):
+
 ```sh
 flutter run --dart-define=USE_DUMMY=true
 ```
-Uses in-memory repositories from `lib/features/<x>/data/repositories/<x>_repository_dummy.dart`. Login with `admin` / `admin123`.
 
-### Run (dev, real backend, Android emulator)
-```sh
-flutter run \
-  --dart-define=USE_DUMMY=false \
-  --dart-define=API_BASE=http://10.0.2.2:3000/api/v1
-```
-`10.0.2.2` is the loopback alias inside the Android emulator. For a physical
-device on the same Wi-Fi, use your host's LAN IP instead.
+> **Note:** The `USE_DUMMY` flag defaults to `false` since this app is
+> API-first. The flag is only needed for offline demos.
 
 ### Build APK (release)
 ```sh
@@ -66,10 +79,15 @@ flutter build apk --release \
 
 ## Environment Variables (compile-time)
 
-| Flag                | Default                       | Description |
-|---------------------|-------------------------------|-------------|
-| `USE_DUMMY`         | `true`                        | `true` = in-memory dummy repos. `false` = real API via Dio. |
-| `API_BASE`          | `http://10.0.2.2:3000/api/v1` | Base URL prepended to every endpoint. |
+| Flag                | Default                                  | Description |
+|---------------------|------------------------------------------|-------------|
+| `USE_DUMMY`         | `false`                                  | `true` = in-memory dummy repos (offline demo). `false` = real API via Dio (default). |
+| `API_BASE`          | `10.0.2.2:3000` on Android, `127.0.0.1:3000` on desktop | Base URL prepended to every endpoint. Always wins when set explicitly. |
+
+Without an explicit `API_BASE`, the app picks the right loopback alias for
+the platform at runtime (Android emulator: `10.0.2.2`; Linux/Windows/macOS
+desktop: `127.0.0.1`; web: `localhost`). For a physical Android device on
+the same Wi-Fi, pass `--dart-define=API_BASE=http://<host-LAN-IP>:3000/api/v1`.
 
 Defined in `lib/core/config/dummy_flag.dart` and `lib/core/network/api_client.dart`.
 

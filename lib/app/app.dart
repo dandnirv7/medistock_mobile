@@ -21,5 +21,5 @@ class MediStockApp extends StatelessWidget {
     );
   }
 
-  String _resolveInitialRoute() => AppRoutes.splash;
+  String _resolveInitialRoute() => AppRoutes.login;
 }

@@ -13,88 +13,52 @@ class StockOutView extends GetView<StockOutController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Stok Keluar')),
-      body: Obx(() {
-        return Form(
-          key: controller.formKey,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-            children: [
-              if (controller.errorMessage.value != null)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.danger.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: AppColors.danger.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Text(
-                    controller.errorMessage.value!,
-                    style: const TextStyle(color: AppColors.danger),
-                  ),
-                ),
-              _LabeledField(
-                icon: Icons.medication_outlined,
-                child: _ObatDropdown(),
-              ),
-              if (controller.selectedMedicine != null) ...[
-                const SizedBox(height: 8),
-                _StockInfoTile(medicine: controller.selectedMedicine!),
-              ],
-              const SizedBox(height: 14),
-              _LabeledField(
-                icon: Icons.inventory_outlined,
-                child: _QuantityField(),
-              ),
-              const SizedBox(height: 14),
-              _LabeledField(
-                icon: Icons.flag_outlined,
-                child: _ReasonDropdown(),
-              ),
-              const SizedBox(height: 14),
-              _LabeledField(
-                icon: Icons.calendar_today_outlined,
-                child: _DateField(),
-              ),
-              const SizedBox(height: 14),
-              _LabeledField(
-                icon: Icons.note_outlined,
-                child: _NotesField(),
-              ),
-              const SizedBox(height: 20),
-              _SummaryCard(),
-              const SizedBox(height: 24),
-              Obx(
-                () => ElevatedButton.icon(
-                  onPressed: controller.isLoading.value
-                      ? null
-                      : () async {
-                          final ok = await controller.submit();
-                          if (ok) {
-                            Get.back();
-                            Get.snackbar(
-                              'Berhasil',
-                              'Stok keluar berhasil disimpan',
-                              snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: AppColors.primary,
-                              colorText: Colors.white,
-                            );
-                          }
-                        },
-                  icon: const Icon(Icons.save_outlined),
-                  label: Text(
-                    controller.isLoading.value
-                        ? 'Menyimpan…'
-                        : 'Simpan Stok Keluar',
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }),
+      body: Form(
+        key: controller.formKey,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          children: [
+            _ErrorBanner(),
+            _LabeledField(
+              icon: Icons.medication_outlined,
+              child: _ObatDropdown(),
+            ),
+            Obx(() {
+              controller.medicineId.value; // subscribe
+              final med = controller.selectedMedicine;
+              if (med == null) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: _StockInfoTile(medicine: med),
+              );
+            }),
+            const SizedBox(height: 14),
+            _LabeledField(
+              icon: Icons.inventory_outlined,
+              child: _QuantityField(),
+            ),
+            const SizedBox(height: 14),
+            _LabeledField(
+              icon: Icons.flag_outlined,
+              child: _ReasonDropdown(),
+            ),
+            const SizedBox(height: 14),
+            _LabeledField(
+              icon: Icons.calendar_today_outlined,
+              child: _DateField(),
+            ),
+            const SizedBox(height: 14),
+            _LabeledField(
+              icon: Icons.note_outlined,
+              child: _NotesField(),
+            ),
+            const SizedBox(height: 20),
+            _SummaryCard(),
+            const SizedBox(height: 24),
+            _SubmitButton(),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -134,20 +98,22 @@ class _ObatDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Get.find<StockOutController>();
-    return DropdownButtonFormField<String>(
-      initialValue: c.medicineId.value,
-      isExpanded: true,
-      items: c.medicines
-          .map(
-            (m) => DropdownMenuItem(
-              value: m.id,
-              child: Text(m.name, overflow: TextOverflow.ellipsis),
-            ),
-          )
-          .toList(),
-      onChanged: c.setMedicine,
-      decoration: const InputDecoration(labelText: 'Obat'),
-      validator: (v) => v == null ? 'Pilih obat terlebih dahulu' : null,
+    return Obx(
+      () => DropdownButtonFormField<String>(
+        initialValue: c.medicineId.value,
+        isExpanded: true,
+        items: c.medicines
+            .map(
+              (m) => DropdownMenuItem(
+                value: m.id,
+                child: Text(m.name, overflow: TextOverflow.ellipsis),
+              ),
+            )
+            .toList(),
+        onChanged: c.setMedicine,
+        decoration: const InputDecoration(labelText: 'Obat'),
+        validator: (v) => v == null ? 'Pilih obat terlebih dahulu' : null,
+      ),
     );
   }
 }
@@ -170,19 +136,24 @@ class _QuantityField extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           flex: 1,
-          child: Container(
-            height: 56,
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Text(
-              c.selectedMedicine?.unit ?? '-',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
+          child: Obx(
+            () {
+              c.medicineId.value; // subscribe to changes
+              return Container(
+                height: 56,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  c.selectedMedicine?.unit ?? '-',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              );
+            },
           ),
         ),
       ],
@@ -194,22 +165,24 @@ class _ReasonDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Get.find<StockOutController>();
-    return DropdownButtonFormField<StockMovementReason>(
-      initialValue: c.reason.value,
-      isExpanded: true,
-      items: StockMovementReason.values
-          .where((r) => r != StockMovementReason.purchase)
-          .map(
-            (r) => DropdownMenuItem(
-              value: r,
-              child: Text(r.label),
-            ),
-          )
-          .toList(),
-      onChanged: (v) {
-        if (v != null) c.setReason(v);
-      },
-      decoration: const InputDecoration(labelText: 'Alasan'),
+    return Obx(
+      () => DropdownButtonFormField<StockMovementReason>(
+        initialValue: c.reason.value,
+        isExpanded: true,
+        items: StockMovementReason.values
+            .where((r) => r != StockMovementReason.purchase)
+            .map(
+              (r) => DropdownMenuItem(
+                value: r,
+                child: Text(r.label),
+              ),
+            )
+            .toList(),
+        onChanged: (v) {
+          if (v != null) c.setReason(v);
+        },
+        decoration: const InputDecoration(labelText: 'Alasan'),
+      ),
     );
   }
 }
@@ -252,11 +225,15 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Get.find<StockOutController>();
     return Obx(() {
+      c.medicineId.value; // subscribe to medicine changes
       final med = c.selectedMedicine;
-      final qty = int.tryParse(c.quantityCtrl.text) ?? 0;
-      final stockAfter =
-          med == null ? 0 : (med.currentStock - qty).clamp(0, 1 << 30);
-      return Container(
+      return ValueListenableBuilder<TextEditingValue>(
+        valueListenable: c.quantityCtrl,
+        builder: (context, _, __) {
+          final qty = int.tryParse(c.quantityCtrl.text) ?? 0;
+          final stockAfter =
+              med == null ? 0 : (med.currentStock - qty).clamp(0, 1 << 30);
+          return Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.primaryLight,
@@ -288,6 +265,8 @@ class _SummaryCard extends StatelessWidget {
             ),
           ],
         ),
+      );
+        },
       );
     });
   }
@@ -359,6 +338,62 @@ class _StockInfoTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<StockOutController>();
+    return Obx(() {
+      final msg = c.errorMessage.value;
+      if (msg == null) return const SizedBox.shrink();
+      return Container(
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: AppColors.danger.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: AppColors.danger.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Text(
+          msg,
+          style: const TextStyle(color: AppColors.danger),
+        ),
+      );
+    });
+  }
+}
+
+class _SubmitButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<StockOutController>();
+    return Obx(
+      () => ElevatedButton.icon(
+        onPressed: c.isLoading.value
+            ? null
+            : () async {
+                final ok = await c.submit();
+                if (ok) {
+                  Get.back();
+                  Get.snackbar(
+                    'Berhasil',
+                    'Stok keluar berhasil disimpan',
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: AppColors.primary,
+                    colorText: Colors.white,
+                  );
+                }
+              },
+        icon: const Icon(Icons.save_outlined),
+        label: Text(
+          c.isLoading.value ? 'Menyimpan…' : 'Simpan Stok Keluar',
+        ),
       ),
     );
   }

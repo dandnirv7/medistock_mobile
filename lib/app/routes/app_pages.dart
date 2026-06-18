@@ -22,11 +22,13 @@ import '../../features/splash/views/splash_view.dart';
 import '../../features/stock_movements/bindings/stock_movement_binding.dart';
 import '../../features/stock_movements/views/stock_in_view.dart';
 import '../../features/stock_movements/views/stock_movement_list_view.dart';
+import '../../features/stock_movements/views/stock_level_view.dart';
 import '../../features/stock_movements/views/stock_out_view.dart';
 import '../../features/suppliers/bindings/supplier_binding.dart';
 import '../../features/suppliers/views/supplier_form_view.dart';
 import '../../features/suppliers/views/supplier_list_view.dart';
 import '../bindings/auth_middleware.dart';
+import '../bindings/role_guard.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -59,13 +61,13 @@ class AppPages {
       name: AppRoutes.medicines,
       page: () => const MedicineListView(),
       binding: MedicineBinding(),
-      middlewares: [AuthMiddleware()],
+      middlewares: [AuthMiddleware(), RoleGuard.requireAdmin],
     ),
     GetPage(
       name: AppRoutes.medicineForm,
       page: () => const MedicineFormView(),
       binding: MedicineBinding(),
-      middlewares: [AuthMiddleware()],
+      middlewares: [AuthMiddleware(), RoleGuard.requireAdmin],
     ),
     GetPage(
       name: AppRoutes.medicineDetail,
@@ -77,25 +79,25 @@ class AppPages {
       name: AppRoutes.categories,
       page: () => const CategoryListView(),
       binding: CategoryBinding(),
-      middlewares: [AuthMiddleware()],
+      middlewares: [AuthMiddleware(), RoleGuard.requireAdmin],
     ),
     GetPage(
       name: AppRoutes.categoryForm,
       page: () => const CategoryFormView(),
       binding: CategoryBinding(),
-      middlewares: [AuthMiddleware()],
+      middlewares: [AuthMiddleware(), RoleGuard.requireAdmin],
     ),
     GetPage(
       name: AppRoutes.suppliers,
       page: () => const SupplierListView(),
       binding: SupplierBinding(),
-      middlewares: [AuthMiddleware()],
+      middlewares: [AuthMiddleware(), RoleGuard.requireAdmin],
     ),
     GetPage(
       name: AppRoutes.supplierForm,
       page: () => const SupplierFormView(),
       binding: SupplierBinding(),
-      middlewares: [AuthMiddleware()],
+      middlewares: [AuthMiddleware(), RoleGuard.requireAdmin],
     ),
     GetPage(
       name: AppRoutes.stockIn,
@@ -113,6 +115,12 @@ class AppPages {
       name: AppRoutes.stockMovements,
       page: () => const StockMovementListView(),
       binding: StockMovementBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: AppRoutes.stockLevels,
+      page: () => const StockLevelView(),
+      binding: MedicineBinding(),
       middlewares: [AuthMiddleware()],
     ),
     GetPage(
