@@ -1,3 +1,27 @@
+enum UserRole { admin, staff }
+
+extension UserRoleX on UserRole {
+  String get apiValue => switch (this) {
+        UserRole.admin => 'ADMIN',
+        UserRole.staff => 'STAFF',
+      };
+
+  String get label => switch (this) {
+        UserRole.admin => 'Admin',
+        UserRole.staff => 'Staff',
+      };
+
+  static UserRole fromApi(String? value) {
+    switch ((value ?? '').toUpperCase()) {
+      case 'STAFF':
+        return UserRole.staff;
+      case 'ADMIN':
+      default:
+        return UserRole.admin;
+    }
+  }
+}
+
 class UserModel {
   UserModel({
     required this.id,
@@ -12,6 +36,10 @@ class UserModel {
   final String username;
   final String? email;
   final String role;
+
+  UserRole get userRole => UserRoleX.fromApi(role);
+  bool get isAdmin => userRole == UserRole.admin;
+  bool get isStaff => userRole == UserRole.staff;
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(

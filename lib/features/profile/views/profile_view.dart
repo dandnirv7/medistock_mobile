@@ -125,7 +125,7 @@ class _ProfileHeader extends StatelessWidget {
             ? user!.name[0]
             : 'A')
         .toUpperCase();
-    final role = user?.role ?? 'USER';
+    final role = user?.userRole.label ?? 'User';
     return Column(
       children: [
         Container(

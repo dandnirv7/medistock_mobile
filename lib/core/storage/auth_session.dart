@@ -19,6 +19,8 @@ class AuthSession extends GetxService {
   Rxn<UserModel> get userRx => _user;
   UserModel? get user => _user.value;
   bool get isAuthenticated => _token.value != null && _token.value!.isNotEmpty;
+  bool get isAdmin => user?.isAdmin ?? false;
+  bool get isStaff => user?.isStaff ?? false;
 
   Future<void> hydrate() async {
     if (_hydrated) return;

@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import '../../../core/storage/auth_session.dart';
 import '../../categories/data/repositories/category_repository.dart';
 import '../../categories/models/category_model.dart';
 import '../../suppliers/data/repositories/supplier_repository.dart';
@@ -112,6 +113,11 @@ class MedicineFormController extends GetxController {
   }
 
   Future<bool> submit() async {
+    if (Get.isRegistered<AuthSession>() &&
+        !Get.find<AuthSession>().isAdmin) {
+      errorMessage.value = 'Hanya admin yang dapat menyimpan perubahan';
+      return false;
+    }
     if (isLoading.value) return false;
     if (!(formKey.currentState?.validate() ?? false)) return false;
     if (categoryId.value == null || categoryId.value!.isEmpty) {

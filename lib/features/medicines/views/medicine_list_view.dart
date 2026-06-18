@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
+import '../../../core/storage/auth_session.dart';
 import '../../../core/widgets/loading_overlay.dart';
 import '../controllers/medicine_list_controller.dart';
 import '../data/repositories/medicine_repository.dart' show MedicineExpiredFilter;
@@ -109,11 +110,15 @@ class MedicineListView extends GetView<MedicineListController> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'fab-medicine',
-        onPressed: () => Get.toNamed(AppRoutes.medicineForm),
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add, color: Colors.white),
+      floatingActionButton: Obx(
+        () => Get.find<AuthSession>().userRx.value?.isAdmin == true
+            ? FloatingActionButton(
+                heroTag: 'fab-medicine',
+                onPressed: () => Get.toNamed(AppRoutes.medicineForm),
+                backgroundColor: AppColors.primary,
+                child: const Icon(Icons.add, color: Colors.white),
+              )
+            : const SizedBox.shrink(),
       ),
     );
   }

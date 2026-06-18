@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/storage/auth_session.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/loading_overlay.dart';
@@ -76,41 +77,45 @@ class MedicineDetailView extends GetView<MedicineDetailController> {
               ),
             ],
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                      minimumSize: const Size.fromHeight(48),
-                    ),
-                    onPressed: () => Get.toNamed(
-                      AppRoutes.medicineForm,
-                      arguments: m,
-                    ),
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Edit'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.danger,
-                      side: const BorderSide(color: AppColors.danger),
-                      minimumSize: const Size.fromHeight(48),
-                    ),
-                    onPressed: () => Get.snackbar(
-                      'Segera Hadir',
-                      'Hapus obat akan tersedia di rilis berikutnya.',
-                      snackPosition: SnackPosition.BOTTOM,
-                    ),
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Hapus'),
-                  ),
-                ),
-              ],
+            Obx(
+              () => Get.find<AuthSession>().userRx.value?.isAdmin == true
+                  ? Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(color: AppColors.primary),
+                              minimumSize: const Size.fromHeight(48),
+                            ),
+                            onPressed: () => Get.toNamed(
+                              AppRoutes.medicineForm,
+                              arguments: m,
+                            ),
+                            icon: const Icon(Icons.edit_outlined),
+                            label: const Text('Edit'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.danger,
+                              side: const BorderSide(color: AppColors.danger),
+                              minimumSize: const Size.fromHeight(48),
+                            ),
+                            onPressed: () => Get.snackbar(
+                              'Segera Hadir',
+                              'Hapus obat akan tersedia di rilis berikutnya.',
+                              snackPosition: SnackPosition.BOTTOM,
+                            ),
+                            icon: const Icon(Icons.delete_outline),
+                            label: const Text('Hapus'),
+                          ),
+                        ),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
             ),
           ],
         );

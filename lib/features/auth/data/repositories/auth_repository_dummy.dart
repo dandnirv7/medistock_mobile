@@ -12,13 +12,39 @@ class AuthRepositoryDummy implements AuthRepository {
   AuthRepositoryDummy({required SecureStorageService storage}) : _storage = storage;
 
   final SecureStorageService _storage;
-  final UserModel _seedUser = UserModel(
-    id: 'user-1',
-    name: 'Admin Apotek',
-    username: 'admin',
-    email: 'admin@apotek.test',
-    role: 'ADMIN',
-  );
+
+  static final List<({String password, UserModel user})> _seedAccounts = [
+    (
+      password: 'admin123',
+      user: UserModel(
+        id: 'user-1',
+        name: 'Admin Apotek',
+        username: 'admin',
+        email: 'admin@apotek.test',
+        role: 'ADMIN',
+      ),
+    ),
+    (
+      password: 'apoteker123',
+      user: UserModel(
+        id: 'user-2',
+        name: 'Apoteker',
+        username: 'apoteker',
+        email: 'apoteker@apotek.test',
+        role: 'STAFF',
+      ),
+    ),
+    (
+      password: 'kasir123',
+      user: UserModel(
+        id: 'user-3',
+        name: 'Kasir',
+        username: 'kasir',
+        email: 'kasir@apotek.test',
+        role: 'STAFF',
+      ),
+    ),
+  ];
 
   @override
   Future<LoginResponse> login({
@@ -26,7 +52,12 @@ class AuthRepositoryDummy implements AuthRepository {
     required String password,
   }) async {
     await Future.delayed(const Duration(milliseconds: 350));
-    if (username.trim().toLowerCase() != 'admin' || password != 'admin123') {
+    final key = username.trim().toLowerCase();
+    final match = _seedAccounts
+        .where((a) => a.user.username.toLowerCase() == key)
+        .where((a) => a.password == password)
+        .firstOrNull;
+    if (match == null) {
       throw ApiException(
         code: 'UNAUTHORIZED',
         message: 'Username atau password salah',
@@ -35,8 +66,8 @@ class AuthRepositoryDummy implements AuthRepository {
     }
     final token = _generateToken();
     await _storage.writeToken(token);
-    await _storage.writeUser(jsonEncode(_seedUser.toJson()));
-    return LoginResponse(token: token, user: _seedUser);
+    await _storage.writeUser(jsonEncode(match.user.toJson()));
+    return LoginResponse(token: token, user: match.user);
   }
 
   @override

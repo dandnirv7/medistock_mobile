@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../../../core/storage/auth_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -76,10 +77,14 @@ class CategoryListView extends GetView<CategoryListController> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Get.toNamed(AppRoutes.categoryForm),
-        icon: const Icon(Icons.add),
-        label: const Text('Tambah'),
+      floatingActionButton: Obx(
+        () => Get.find<AuthSession>().userRx.value?.isAdmin == true
+            ? FloatingActionButton.extended(
+                onPressed: () => Get.toNamed(AppRoutes.categoryForm),
+                icon: const Icon(Icons.add),
+                label: const Text('Tambah'),
+              )
+            : const SizedBox.shrink(),
       ),
     );
   }
