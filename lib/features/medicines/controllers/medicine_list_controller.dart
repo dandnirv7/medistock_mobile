@@ -1,22 +1,32 @@
+import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 
 import '../../../core/models/paginated.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/utils/ui_state.dart';
 import '../data/repositories/medicine_repository.dart';
 import '../models/medicine_model.dart';
 
-class MedicineListController extends GetxController {
-  MedicineListController(this._repo);
+class MedicineListController extends GetxController
+    with AsyncListState<MedicineModel> {
+  MedicineListController(this._repo, {ApiClient? apiClient})
+      : _apiClient = apiClient ?? Get.find<ApiClient>();
 
   final MedicineRepository _repo;
+  final ApiClient _apiClient;
 
-  final RxList<MedicineModel> items = <MedicineModel>[].obs;
+  // Monotonic token for load() calls. A response whose token does not match
+  // the latest request is discarded, so filter swaps (e.g. tab changes in
+  // Alerts) never let a stale response overwrite the current state.
+  int _loadToken = 0;
+  CancelToken? _activeToken;
+
   final RxInt page = 1.obs;
   static const int limit = 20;
   final RxInt total = 0.obs;
   final RxInt totalPages = 1.obs;
-  final RxBool isLoading = false.obs;
   final RxBool isLoadingMore = false.obs;
-  final RxnString errorMessage = RxnString();
 
   final RxString search = ''.obs;
   final RxnString categoryFilter = RxnString();
@@ -28,50 +38,96 @@ class MedicineListController extends GetxController {
   @override
   void onReady() {
     super.onReady();
-    fetch();
+    load();
+  }
+
+  @override
+  Future<void> load() async {
+    final token = ++_loadToken;
+    _activeToken?.cancel('superseded');
+    final cancelToken = _apiClient.beginMedicinesRequest();
+    _activeToken = cancelToken;
+    page.value = 1;
+    await runLoad(() async {
+      try {
+        final result =
+            await _fetch(cancelToken: cancelToken);
+        if (token != _loadToken || cancelToken.isCancelled) {
+          return <MedicineModel>[];
+        }
+        return result.items;
+      } on DioException catch (e) {
+        // Cancelled in-flight requests are expected when the user changes
+        // filters rapidly. Don't surface them as a user-visible error.
+        if (CancelToken.isCancel(e)) {
+          return <MedicineModel>[];
+        }
+        rethrow;
+      }
+    });
   }
 
   Future<void> fetch({bool reset = true}) async {
+    final token = ++_loadToken;
+    _activeToken?.cancel('superseded');
+    final cancelToken = _apiClient.beginMedicinesRequest();
+    _activeToken = cancelToken;
+
     if (reset) {
       page.value = 1;
-      items.clear();
     }
-    isLoading.value = reset;
     isLoadingMore.value = !reset;
-    errorMessage.value = null;
+    state.value = ViewState.loading;
+    errorMessage.value = '';
     try {
-      final result = await _repo.getAll(
-        query: MedicineQuery(
-          page: page.value,
-          limit: limit,
-          search: search.value.trim().isEmpty ? null : search.value.trim(),
-          categoryId: categoryFilter.value,
-          supplierId: supplierFilter.value,
-          lowStockOnly: lowStockOnly.value,
-          expiredFilter: expiredFilter.value,
-        ),
-      );
-      _apply(result, reset: reset);
+      final result = await _fetch(cancelToken: cancelToken);
+      if (token != _loadToken || cancelToken.isCancelled) {
+        return;
+      }
+      if (reset) {
+        items.assignAll(result.items);
+      } else {
+        items.addAll(result.items);
+      }
+      total.value = result.total;
+      totalPages.value = result.totalPages;
+      state.value = items.isEmpty ? ViewState.empty : ViewState.content;
+    } on DioException catch (e) {
+      if (CancelToken.isCancel(e)) {
+        return;
+      }
+      errorMessage.value = _formatError(e);
+      state.value = ViewState.error;
     } catch (e) {
-      errorMessage.value = e.toString();
+      if (token != _loadToken || cancelToken.isCancelled) return;
+      errorMessage.value = _formatError(e);
+      state.value = ViewState.error;
     } finally {
-      isLoading.value = false;
+      if (identical(_activeToken, cancelToken)) {
+        _activeToken = null;
+      }
       isLoadingMore.value = false;
     }
   }
 
-  void _apply(Paginated<MedicineModel> result, {required bool reset}) {
-    if (reset) {
-      items.assignAll(result.items);
-    } else {
-      items.addAll(result.items);
-    }
-    total.value = result.total;
-    totalPages.value = result.totalPages;
+  Future<Paginated<MedicineModel>> _fetch({CancelToken? cancelToken}) async {
+    return _repo.getAll(
+      query: MedicineQuery(
+        page: page.value,
+        limit: limit,
+        search: search.value.trim().isEmpty ? null : search.value.trim(),
+        categoryId: categoryFilter.value,
+        supplierId: supplierFilter.value,
+        lowStockOnly: lowStockOnly.value,
+        expiredFilter: expiredFilter.value,
+      ),
+      cancelToken: cancelToken,
+    );
   }
 
   Future<void> loadMore() async {
-    if (isLoading.value || isLoadingMore.value) return;
+    if (state.value == ViewState.loading) return;
+    if (isLoadingMore.value) return;
     if (page.value >= totalPages.value) return;
     page.value += 1;
     await fetch(reset: false);
@@ -79,27 +135,27 @@ class MedicineListController extends GetxController {
 
   Future<void> setSearch(String value) async {
     search.value = value;
-    await fetch();
+    await load();
   }
 
   Future<void> setCategoryFilter(String? id) async {
     categoryFilter.value = id;
-    await fetch();
+    await load();
   }
 
   Future<void> setSupplierFilter(String? id) async {
     supplierFilter.value = id;
-    await fetch();
+    await load();
   }
 
   Future<void> setLowStockOnly(bool value) async {
     lowStockOnly.value = value;
-    await fetch();
+    await load();
   }
 
   Future<void> setExpiredFilter(MedicineExpiredFilter f) async {
     expiredFilter.value = f;
-    await fetch();
+    await load();
   }
 
   Future<void> resetFilters() async {
@@ -108,7 +164,7 @@ class MedicineListController extends GetxController {
     supplierFilter.value = null;
     lowStockOnly.value = false;
     expiredFilter.value = MedicineExpiredFilter.all;
-    await fetch();
+    await load();
   }
 
   Future<void> delete(MedicineModel m) async {
@@ -117,5 +173,39 @@ class MedicineListController extends GetxController {
   }
 
   @override
-  Future<void> refresh() => fetch();
+  void onClose() {
+    // Cancel any in-flight medicines request so its callbacks cannot
+    // mutate state after the controller is disposed (e.g. when leaving the
+    // medicine list while a query is still pending).
+    _apiClient.cancelActiveMedicinesRequest();
+    _activeToken = null;
+    super.onClose();
+  }
+
+  @override
+  Future<void> refresh() async {
+    final token = ++_loadToken;
+    _activeToken?.cancel('superseded');
+    final cancelToken = _apiClient.beginMedicinesRequest();
+    _activeToken = cancelToken;
+    await runRefresh(() async {
+      try {
+        final result =
+            await _fetch(cancelToken: cancelToken);
+        if (token != _loadToken || cancelToken.isCancelled) {
+          return items.toList();
+        }
+        return result.items;
+      } on DioException catch (e) {
+        if (CancelToken.isCancel(e)) {
+          return items.toList();
+        }
+        rethrow;
+      }
+    });
+  }
+
+  String _formatError(Object e) {
+    return ApiException.messageFrom(e);
+  }
 }
