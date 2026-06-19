@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../controllers/stock_movement_list_controller.dart';
 import '../models/stock_movement_model.dart';
+import '../../../core/theme/app_icons.dart';
 
 class StockMovementFilterSheet extends StatefulWidget {
   const StockMovementFilterSheet({super.key});
@@ -119,7 +120,7 @@ class _StockMovementFilterSheetState extends State<StockMovementFilterSheet> {
                   controller: _noteCtrl,
                   decoration: const InputDecoration(
                     hintText: 'Cari catatan...',
-                    prefixIcon: Icon(Icons.search),
+                    prefixIcon: Icon(AppIcons.search),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -223,7 +224,7 @@ class _DateField extends StatelessWidget {
                 style: const TextStyle(fontSize: 14),
               ),
             ),
-            const Icon(Icons.calendar_today, size: 18),
+            const Icon(AppIcons.calendar_today, size: 18),
           ],
         ),
       ),

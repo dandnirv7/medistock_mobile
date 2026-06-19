@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../auth/models/user_model.dart';
 import '../controllers/profile_controller.dart';
+import '../../../core/theme/app_icons.dart';
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({super.key});
@@ -31,52 +33,35 @@ class _Body extends StatelessWidget {
         Obx(() => _ProfileHeader(user: session.userRx.value)),
         const SizedBox(height: 24),
         _SectionTile(
-          icon: Icons.account_circle_outlined,
+          icon: AppIcons.accountCircleOutlined,
           title: 'Informasi Akun',
           subtitle: 'Lihat dan kelola informasi akun Anda',
           onTap: () {
-            Get.snackbar(
-              'Segera Hadir',
-              'Detail informasi akun akan tersedia di rilis berikutnya.',
-              snackPosition: SnackPosition.BOTTOM,
-            );
+            SnackbarHelper.info('Detail informasi akun akan tersedia di rilis berikutnya.');
           },
         ),
         _SectionTile(
-          icon: Icons.settings_outlined,
+          icon: AppIcons.settings_outlined,
           title: 'Pengaturan Aplikasi',
           subtitle: 'Tema, notifikasi, dan preferensi lainnya',
           onTap: () {
-            Get.snackbar(
-              'Segera Hadir',
-              'Pengaturan aplikasi akan tersedia di rilis berikutnya.',
-              snackPosition: SnackPosition.BOTTOM,
-            );
+            SnackbarHelper.info('Pengaturan aplikasi akan tersedia di rilis berikutnya.');
           },
         ),
         _SectionTile(
-          icon: Icons.shield_outlined,
+          icon: AppIcons.shield_outlined,
           title: 'Keamanan',
           subtitle: 'Ubah password dan keamanan akun',
           onTap: () {
-            Get.snackbar(
-              'Segera Hadir',
-              'Pengaturan keamanan akan tersedia di rilis berikutnya.',
-              snackPosition: SnackPosition.BOTTOM,
-            );
+            SnackbarHelper.info('Pengaturan keamanan akan tersedia di rilis berikutnya.');
           },
         ),
         _SectionTile(
-          icon: Icons.info_outline,
+          icon: AppIcons.info_outline,
           title: 'Tentang Aplikasi',
           subtitle: 'Versi 1.0.0',
           onTap: () {
-            Get.snackbar(
-              'Tentang Aplikasi',
-              'MediStock Inventory v1.0.0\nKelola Stok Obat dengan Mudah, Aman, dan Terpercaya.',
-              snackPosition: SnackPosition.BOTTOM,
-              duration: const Duration(seconds: 3),
-            );
+            SnackbarHelper.info('MediStock Inventory v1.0.0\nKelola Stok Obat dengan Mudah, Aman, dan Terpercaya.');
           },
         ),
         const SizedBox(height: 24),
@@ -87,7 +72,7 @@ class _Body extends StatelessWidget {
             minimumSize: const Size.fromHeight(48),
           ),
           onPressed: () => _confirmLogout(context),
-          icon: const Icon(Icons.logout),
+          icon: const Icon(AppIcons.logout),
           label: const Text('Logout'),
         ),
       ],
@@ -105,11 +90,7 @@ class _Body extends StatelessWidget {
       );
       if (ok) await controller.logout();
     } catch (e) {
-      Get.snackbar(
-        'Logout gagal',
-        e.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-      );
+SnackbarHelper.error('Logout gagal: ${e.toString()}');
     }
   }
 }
@@ -232,7 +213,7 @@ class _SectionTile extends StatelessWidget {
           ),
         ),
         trailing: const Icon(
-          Icons.chevron_right,
+          AppIcons.chevron_right,
           color: AppColors.textSecondary,
         ),
         onTap: onTap,

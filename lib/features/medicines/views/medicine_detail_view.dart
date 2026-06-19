@@ -3,12 +3,14 @@ import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/storage/auth_session.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/loading_overlay.dart';
 import '../controllers/medicine_detail_controller.dart';
 import '../models/medicine_model.dart';
+import '../../../core/theme/app_icons.dart';
 
 class MedicineDetailView extends GetView<MedicineDetailController> {
   const MedicineDetailView({super.key});
@@ -92,7 +94,7 @@ class MedicineDetailView extends GetView<MedicineDetailController> {
                               AppRoutes.medicineForm,
                               arguments: m,
                             ),
-                            icon: const Icon(Icons.edit_outlined),
+                            icon: const Icon(AppIcons.edit_outlined),
                             label: const Text('Edit'),
                           ),
                         ),
@@ -104,12 +106,8 @@ class MedicineDetailView extends GetView<MedicineDetailController> {
                               side: const BorderSide(color: AppColors.danger),
                               minimumSize: const Size.fromHeight(48),
                             ),
-                            onPressed: () => Get.snackbar(
-                              'Segera Hadir',
-                              'Hapus obat akan tersedia di rilis berikutnya.',
-                              snackPosition: SnackPosition.BOTTOM,
-                            ),
-                            icon: const Icon(Icons.delete_outline),
+                            onPressed: () => SnackbarHelper.info('Hapus obat akan tersedia di rilis berikutnya.'),
+                            icon: const Icon(AppIcons.delete_outline),
                             label: const Text('Hapus'),
                           ),
                         ),
@@ -150,7 +148,7 @@ class _Header extends StatelessWidget {
             ),
             alignment: Alignment.center,
             child: Icon(
-              isTablet ? Icons.medication : Icons.medical_services,
+              isTablet ? AppIcons.medication : AppIcons.medicalServices,
               color: AppColors.primary,
               size: 32,
             ),

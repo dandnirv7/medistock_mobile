@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/haptics.dart';
+import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../medicines/models/medicine_model.dart';
 import '../../suppliers/models/supplier_model.dart';
 import '../controllers/stock_in_controller.dart';
+import '../../../core/theme/app_icons.dart';
 
 class StockInView extends GetView<StockInController> {
   const StockInView({super.key});
@@ -37,7 +40,7 @@ class StockInView extends GetView<StockInController> {
                   ),
                 ),
               _LabeledField(
-                icon: Icons.medication_outlined,
+                icon: AppIcons.medicationOutlined,
                 child: _ObatDropdown(),
               ),
               if (controller.selectedMedicine != null) ...[
@@ -46,7 +49,7 @@ class StockInView extends GetView<StockInController> {
               ],
               const SizedBox(height: 14),
               _LabeledField(
-                icon: Icons.local_shipping_outlined,
+                icon: AppIcons.localShippingOutlined,
                 child: _SupplierDropdown(),
               ),
               const SizedBox(height: 14),
@@ -55,7 +58,7 @@ class StockInView extends GetView<StockInController> {
                   Expanded(
                     flex: 2,
                     child: _LabeledField(
-                      icon: Icons.inventory_outlined,
+                      icon: AppIcons.inventoryOutlined,
                       child: _QuantityField(),
                     ),
                   ),
@@ -68,12 +71,12 @@ class StockInView extends GetView<StockInController> {
               ),
               const SizedBox(height: 14),
               _LabeledField(
-                icon: Icons.calendar_today_outlined,
+                icon: AppIcons.calendar_today_outlined,
                 child: _DateField(),
               ),
               const SizedBox(height: 14),
               _LabeledField(
-                icon: Icons.note_outlined,
+                icon: AppIcons.note_outlined,
                 child: _NotesField(),
               ),
               const SizedBox(height: 20),
@@ -87,16 +90,11 @@ class StockInView extends GetView<StockInController> {
                           final ok = await controller.submit();
                           if (ok) {
                             Get.back();
-                            Get.snackbar(
-                              'Berhasil',
-                              'Stok masuk berhasil disimpan',
-                              snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: AppColors.primary,
-                              colorText: Colors.white,
-                            );
+                            SnackbarHelper.success('Stok masuk berhasil disimpan');
+                            await Haptics.lightSuccess();
                           }
                         },
-                  icon: const Icon(Icons.save_outlined),
+                  icon: const Icon(AppIcons.save_outlined),
                   label: Text(
                     controller.isLoading.value ? 'Menyimpan…' : 'Simpan Stok Masuk',
                   ),
@@ -369,7 +367,7 @@ class _CurrentStockTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline, color: AppColors.primary),
+          const Icon(AppIcons.info_outline, color: AppColors.primary),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

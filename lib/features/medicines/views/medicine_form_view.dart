@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../controllers/medicine_form_controller.dart';
+import '../../../core/theme/app_icons.dart';
 
 class MedicineFormView extends GetView<MedicineFormController> {
   const MedicineFormView({super.key});
@@ -165,7 +166,7 @@ class MedicineFormView extends GetView<MedicineFormController> {
                   labelText: 'Tanggal Expired',
                   suffixIcon: IconButton(
                     onPressed: () => _pickDate(context),
-                    icon: const Icon(Icons.calendar_today_outlined),
+                    icon: const Icon(AppIcons.calendar_today_outlined),
                   ),
                 ),
                 onTap: () => _pickDate(context),

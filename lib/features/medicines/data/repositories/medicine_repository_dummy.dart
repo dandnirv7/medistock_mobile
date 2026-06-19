@@ -1,4 +1,6 @@
 import '../../../../data/dummy/dummy_store.dart';
+import 'package:dio/dio.dart';
+
 import '../../../../core/models/paginated.dart';
 import '../../../categories/models/category_model.dart';
 import '../../../suppliers/models/supplier_model.dart';
@@ -52,7 +54,10 @@ class MedicineRepositoryDummy implements MedicineRepository {
   }
 
   @override
-  Future<Paginated<MedicineModel>> getAll({MedicineQuery? query}) async {
+  Future<Paginated<MedicineModel>> getAll({
+    MedicineQuery? query,
+    CancelToken? cancelToken,
+  }) async {
     await Future.delayed(const Duration(milliseconds: 300));
     final q = query ?? MedicineQuery();
     final filtered = _applyQuery(q, _store.medicinesMutable);

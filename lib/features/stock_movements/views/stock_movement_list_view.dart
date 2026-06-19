@@ -3,10 +3,10 @@ import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/date_formatter.dart';
-import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/error_view.dart';
-import '../../../core/widgets/loading_overlay.dart';
+import '../../../core/widgets/data_async_view.dart';
 import '../controllers/stock_movement_list_controller.dart';
 import '../models/stock_movement_model.dart';
 import '../widgets/stock_movement_filter_sheet.dart';
@@ -27,7 +27,7 @@ class StockMovementListView extends GetView<StockMovementListController> {
               icon: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  const Icon(Icons.tune),
+                  const Icon(AppIcons.filter),
                   if (controller.hasActiveFilters)
                     Positioned(
                       right: -2,
@@ -50,64 +50,50 @@ class StockMovementListView extends GetView<StockMovementListController> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              AppSpacing.sm,
+            ),
             child: TextField(
               onChanged: controller.setSearch,
               decoration: InputDecoration(
                 hintText: 'Cari obat, supplier, atau catatan...',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const Icon(AppIcons.search),
                 suffixIcon: Obx(
                   () => controller.search.value.isEmpty
                       ? const SizedBox.shrink()
                       : IconButton(
-                          icon: const Icon(Icons.close),
+                          icon: const Icon(AppIcons.close),
                           onPressed: () {
                             controller.search.value = '';
-                            controller.fetch();
+                            controller.load();
                           },
                         ),
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
               ),
             ),
           ),
           Expanded(
-            child: Obx(() {
-              if (controller.isLoading.value && controller.items.isEmpty) {
-                return const LoadingOverlay();
-              }
-              if (controller.errorMessage.value != null &&
-                  controller.items.isEmpty) {
-                return ErrorView(
-                  message: controller.errorMessage.value!,
-                  onRetry: controller.refresh,
-                );
-              }
-              if (controller.items.isEmpty) {
-                return const EmptyState(
-                  icon: Icons.swap_vert_outlined,
-                  title: 'Belum ada mutasi',
-                );
-              }
-              return RefreshIndicator(
-                onRefresh: controller.refresh,
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
-                  itemCount: controller.items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 6),
-                  itemBuilder: (context, i) => _MovementCard(
-                    movement: controller.items[i],
-                    onTapMedicine: () {
-                      Get.toNamed(
-                        AppRoutes.medicineDetail,
-                        parameters: {'id': controller.items[i].medicineId},
-                      );
-                    },
-                  ),
-                ),
-              );
-            }),
+            child: RefreshIndicator(
+              onRefresh: controller.refresh,
+              child: DataAsyncView<StockMovementModel>(
+                state: controller.state,
+                items: controller.items,
+                errorMessage: controller.errorMessage,
+                onRetry: controller.load,
+                emptyTitle: 'Belum ada mutasi',
+                emptySubtitle:
+                    'Mutasi stok akan muncul di sini setelah ada stok masuk atau keluar',
+                emptyIcon: AppIcons.swapVert,
+                builder: (context, list) => _MovementList(items: list),
+              ),
+            ),
           ),
         ],
       ),
@@ -118,14 +104,14 @@ class StockMovementListView extends GetView<StockMovementListController> {
             heroTag: 'fab-in',
             onPressed: () => Get.toNamed(AppRoutes.stockIn),
             backgroundColor: AppColors.success,
-            child: const Icon(Icons.arrow_downward, color: Colors.white),
+            child: const Icon(AppIcons.stockIn, color: Colors.white),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           FloatingActionButton.small(
             heroTag: 'fab-out',
             onPressed: () => Get.toNamed(AppRoutes.stockOut),
             backgroundColor: AppColors.danger,
-            child: const Icon(Icons.arrow_upward, color: Colors.white),
+            child: const Icon(AppIcons.stockOut, color: Colors.white),
           ),
         ],
       ),
@@ -138,6 +124,35 @@ class StockMovementListView extends GetView<StockMovementListController> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const StockMovementFilterSheet(),
+    );
+  }
+}
+
+class _MovementList extends StatelessWidget {
+  const _MovementList({required this.items});
+  final List<StockMovementModel> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        AppSpacing.xl,
+      ),
+      itemCount: items.length,
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+      itemBuilder: (context, i) {
+        final m = items[i];
+        return _MovementCard(
+          movement: m,
+          onTapMedicine: () => Get.toNamed(
+            AppRoutes.medicineDetail,
+            parameters: {'id': m.medicineId},
+          ),
+        );
+      },
     );
   }
 }
@@ -156,10 +171,10 @@ class _MovementCard extends StatelessWidget {
     final isIn = movement.type == StockMovementType.stockIn;
     final accent = isIn ? AppColors.success : AppColors.danger;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(AppSpacing.md + 2),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadii.border(AppRadii.lg),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -168,7 +183,10 @@ class _MovementCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 3,
+                ),
                 decoration: BoxDecoration(
                   color: accent,
                   borderRadius: BorderRadius.circular(6),
@@ -182,7 +200,7 @@ class _MovementCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppSpacing.sm + 2),
               Expanded(
                 child: GestureDetector(
                   onTap: onTapMedicine,
@@ -199,17 +217,17 @@ class _MovementCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.sm + 2),
           Row(
             children: [
               _Cell(label: 'Qty', value: '${isIn ? '+' : '-'}${movement.quantity}'),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.lg),
               _Cell(label: 'Sebelum', value: '${movement.stockBefore}'),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.lg),
               _Cell(label: 'Sesudah', value: '${movement.stockAfter}'),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
               Expanded(
@@ -243,30 +261,17 @@ class _MovementCard extends StatelessWidget {
 
 class _Cell extends StatelessWidget {
   const _Cell({required this.label, required this.value});
-
   final String label;
   final String value;
-
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 11,
-          ),
-        ),
-        const SizedBox(height: 1),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 14,
-          ),
-        ),
+        Text(label,
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 10)),
+        Text(value,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
       ],
     );
   }

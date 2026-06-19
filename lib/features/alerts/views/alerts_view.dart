@@ -5,10 +5,10 @@ import '../../../app/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/loading_overlay.dart';
 import '../../medicines/controllers/medicine_list_controller.dart';
 import '../../medicines/data/repositories/medicine_repository.dart';
 import '../../medicines/models/medicine_model.dart';
+import '../../../core/theme/app_icons.dart';
 
 class AlertsView extends StatefulWidget {
   const AlertsView({super.key});
@@ -98,12 +98,9 @@ class _AlertList extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Get.find<MedicineListController>();
     return Obx(() {
-      if (c.isLoading.value && c.items.isEmpty) {
-        return const LoadingOverlay();
-      }
       if (c.items.isEmpty) {
         return const EmptyState(
-          icon: Icons.check_circle_outline,
+          icon: AppIcons.check_circle_outline,
           title: 'Tidak ada alert',
           subtitle: 'Semua obat dalam kondisi aman',
         );
@@ -145,10 +142,10 @@ class _AlertTile extends StatelessWidget {
             ? AppColors.stockLow
             : AppColors.expiredSoon;
     final icon = expired
-        ? Icons.event_busy
+        ? AppIcons.event_busy
         : lowStock
-            ? Icons.warning_amber_outlined
-            : Icons.schedule;
+            ? AppIcons.warning_amber_outlined
+            : AppIcons.schedule;
     final label = expired
         ? 'Expired'
         : lowStock

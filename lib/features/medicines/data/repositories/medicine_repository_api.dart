@@ -1,4 +1,6 @@
 import '../../../../core/models/paginated.dart';
+import 'package:dio/dio.dart' show CancelToken;
+
 import '../../../../core/network/api_client.dart';
 import '../../models/medicine_model.dart';
 import 'medicine_repository.dart';
@@ -27,11 +29,15 @@ class MedicineRepositoryApi implements MedicineRepository {
   }
 
   @override
-  Future<Paginated<MedicineModel>> getAll({MedicineQuery? query}) async {
+  Future<Paginated<MedicineModel>> getAll({
+    MedicineQuery? query,
+    CancelToken? cancelToken,
+  }) async {
     final q = query ?? MedicineQuery();
     final res = await _client.raw.get<Map<String, dynamic>>(
       '/medicines',
       queryParameters: _buildParams(q),
+      cancelToken: cancelToken,
     );
     return Paginated.fromJson(
       res.data ?? const {},

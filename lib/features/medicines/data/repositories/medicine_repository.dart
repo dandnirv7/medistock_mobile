@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../../core/models/paginated.dart';
 import '../../models/medicine_model.dart';
 
@@ -24,7 +26,10 @@ class MedicineQuery {
 }
 
 abstract class MedicineRepository {
-  Future<Paginated<MedicineModel>> getAll({MedicineQuery? query});
+  Future<Paginated<MedicineModel>> getAll({
+    MedicineQuery? query,
+    CancelToken? cancelToken,
+  });
 
   Future<MedicineModel> getById(String id);
 

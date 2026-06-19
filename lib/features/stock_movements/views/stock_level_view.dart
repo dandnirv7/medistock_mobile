@@ -4,11 +4,10 @@ import 'package:get/get.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/error_view.dart';
-import '../../../core/widgets/loading_overlay.dart';
 import '../../medicines/controllers/medicine_list_controller.dart';
 import '../../medicines/data/repositories/medicine_repository.dart' show MedicineExpiredFilter;
 import '../../medicines/models/medicine_model.dart';
+import '../../../core/theme/app_icons.dart';
 
 class StockLevelView extends GetView<MedicineListController> {
   const StockLevelView({super.key});
@@ -24,12 +23,12 @@ class StockLevelView extends GetView<MedicineListController> {
               onChanged: controller.setSearch,
               decoration: InputDecoration(
                 hintText: 'Cari nama atau kode obat...',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const Icon(AppIcons.search),
                 suffixIcon: Obx(
                   () => controller.search.value.isEmpty
                       ? const SizedBox.shrink()
                       : IconButton(
-                          icon: const Icon(Icons.close),
+                          icon: const Icon(AppIcons.close),
                           onPressed: () {
                             controller.search.value = '';
                             controller.fetch();
@@ -44,25 +43,15 @@ class StockLevelView extends GetView<MedicineListController> {
           _StockFilterRow(),
           Expanded(
             child: Obx(() {
-              if (controller.isLoading.value && controller.items.isEmpty) {
-                return const LoadingOverlay();
-              }
-              if (controller.errorMessage.value != null &&
-                  controller.items.isEmpty) {
-                return ErrorView(
-                  message: controller.errorMessage.value!,
-                  onRetry: controller.fetch,
-                );
-              }
               if (controller.items.isEmpty) {
                 return const EmptyState(
-                  icon: Icons.inventory_2_outlined,
+                  icon: AppIcons.inventory2_outlined,
                   title: 'Belum ada data stok',
                   subtitle: 'Tambahkan obat terlebih dahulu untuk melihat stok.',
                 );
               }
               return RefreshIndicator(
-                onRefresh: () => controller.fetch(),
+                onRefresh: () => controller.refresh(),
                 child: ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -82,7 +71,7 @@ class StockLevelView extends GetView<MedicineListController> {
         onPressed: _showMovementTypeSheet,
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.swap_vert),
+        icon: const Icon(AppIcons.swap_vert),
         label: const Text('Mutasi'),
       ),
     );
@@ -120,7 +109,7 @@ class StockLevelView extends GetView<MedicineListController> {
             ),
             const SizedBox(height: 16),
             _MovementTypeTile(
-              icon: Icons.arrow_downward,
+              icon: AppIcons.arrow_downward,
               color: AppColors.primary,
               title: 'Stok Masuk',
               subtitle: 'Catat pembelian / penambahan stok',
@@ -131,7 +120,7 @@ class StockLevelView extends GetView<MedicineListController> {
             ),
             const SizedBox(height: 10),
             _MovementTypeTile(
-              icon: Icons.arrow_upward,
+              icon: AppIcons.arrow_upward,
               color: AppColors.secondary,
               title: 'Stok Keluar',
               subtitle: 'Catat penjualan / pengeluaran stok',
@@ -289,7 +278,7 @@ class _StockLevelCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
-                    Icons.medication_outlined,
+                    AppIcons.medicationOutlined,
                     color: AppColors.primary,
                   ),
                 ),
@@ -500,7 +489,7 @@ class _MovementTypeTile extends StatelessWidget {
               ),
             ),
             const Icon(
-              Icons.chevron_right,
+              AppIcons.chevron_right,
               color: AppColors.textSecondary,
             ),
           ],

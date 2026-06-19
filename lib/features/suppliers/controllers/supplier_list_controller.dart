@@ -1,67 +1,72 @@
 import 'package:get/get.dart';
 
 import '../../../core/models/paginated.dart';
+import '../../../core/utils/ui_state.dart';
 import '../data/repositories/supplier_repository.dart';
 import '../models/supplier_model.dart';
 
-class SupplierListController extends GetxController {
+class SupplierListController extends GetxController
+    with AsyncListState<SupplierModel> {
   SupplierListController(this._repo);
 
   final SupplierRepository _repo;
 
-  final RxList<SupplierModel> items = <SupplierModel>[].obs;
   final RxInt page = 1.obs;
   static const int limit = 20;
   final RxInt total = 0.obs;
   final RxInt totalPages = 1.obs;
-  final RxBool isLoading = false.obs;
   final RxBool isLoadingMore = false.obs;
-  final RxnString errorMessage = RxnString();
   final RxString search = ''.obs;
 
   @override
   void onReady() {
     super.onReady();
-    fetch();
+    load();
+  }
+
+  @override
+  Future<void> load() async {
+    page.value = 1;
+    await runLoad(_fetchItems);
   }
 
   Future<void> fetch({bool reset = true}) async {
     if (reset) {
       page.value = 1;
-      items.clear();
     }
-    isLoading.value = reset;
     isLoadingMore.value = !reset;
-    errorMessage.value = null;
+    state.value = ViewState.loading;
+    errorMessage.value = '';
     try {
-      final result = await _repo.getAll(
+      final result = await _fetch();
+      if (reset) {
+        items.assignAll(result.items);
+      } else {
+        items.addAll(result.items);
+      }
+      total.value = result.total;
+      totalPages.value = result.totalPages;
+      state.value = items.isEmpty ? ViewState.empty : ViewState.content;
+    } catch (e) {
+      errorMessage.value = e.toString();
+      state.value = ViewState.error;
+    } finally {
+      isLoadingMore.value = false;
+    }
+  }
+
+  Future<List<SupplierModel>> _fetchItems() async => (await _fetch()).items;
+  Future<Paginated<SupplierModel>> _fetch() => _repo.getAll(
         query: SupplierQuery(
           page: page.value,
           limit: limit,
           search: search.value.trim().isEmpty ? null : search.value.trim(),
         ),
       );
-      _apply(result, reset: reset);
-    } catch (e) {
-      errorMessage.value = e.toString();
-    } finally {
-      isLoading.value = false;
-      isLoadingMore.value = false;
-    }
-  }
-
-  void _apply(Paginated<SupplierModel> result, {required bool reset}) {
-    if (reset) {
-      items.assignAll(result.items);
-    } else {
-      items.addAll(result.items);
-    }
-    total.value = result.total;
-    totalPages.value = result.totalPages;
-  }
 
   Future<void> loadMore() async {
-    if (isLoading.value || isLoadingMore.value) return;
+    if (state.value == ViewState.loading) return;
+    if (isLoadingMore.value) return;
     if (page.value >= totalPages.value) return;
     page.value += 1;
     await fetch(reset: false);
@@ -69,7 +74,7 @@ class SupplierListController extends GetxController {
 
   Future<void> setSearch(String value) async {
     search.value = value;
-    await fetch();
+    await load();
   }
 
   Future<void> delete(SupplierModel s) async {
@@ -78,5 +83,5 @@ class SupplierListController extends GetxController {
   }
 
   @override
-  Future<void> refresh() => fetch();
+  Future<void> refresh() => runRefresh(_fetchItems);
 }

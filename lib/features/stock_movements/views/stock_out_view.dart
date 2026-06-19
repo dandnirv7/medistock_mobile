@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/haptics.dart';
+import '../../../core/utils/snackbar_helper.dart';
 import '../../medicines/models/medicine_model.dart';
 import '../controllers/stock_out_controller.dart';
 import '../models/stock_movement_model.dart';
+import '../../../core/theme/app_icons.dart';
 
 class StockOutView extends GetView<StockOutController> {
   const StockOutView({super.key});
@@ -20,7 +23,7 @@ class StockOutView extends GetView<StockOutController> {
           children: [
             _ErrorBanner(),
             _LabeledField(
-              icon: Icons.medication_outlined,
+              icon: AppIcons.medicationOutlined,
               child: _ObatDropdown(),
             ),
             Obx(() {
@@ -34,22 +37,22 @@ class StockOutView extends GetView<StockOutController> {
             }),
             const SizedBox(height: 14),
             _LabeledField(
-              icon: Icons.inventory_outlined,
+              icon: AppIcons.inventoryOutlined,
               child: _QuantityField(),
             ),
             const SizedBox(height: 14),
             _LabeledField(
-              icon: Icons.flag_outlined,
+              icon: AppIcons.flag_outlined,
               child: _ReasonDropdown(),
             ),
             const SizedBox(height: 14),
             _LabeledField(
-              icon: Icons.calendar_today_outlined,
+              icon: AppIcons.calendar_today_outlined,
               child: _DateField(),
             ),
             const SizedBox(height: 14),
             _LabeledField(
-              icon: Icons.note_outlined,
+              icon: AppIcons.note_outlined,
               child: _NotesField(),
             ),
             const SizedBox(height: 20),
@@ -329,7 +332,7 @@ class _StockInfoTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline, color: AppColors.secondary),
+          const Icon(AppIcons.info_outline, color: AppColors.secondary),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -381,16 +384,11 @@ class _SubmitButton extends StatelessWidget {
                 final ok = await c.submit();
                 if (ok) {
                   Get.back();
-                  Get.snackbar(
-                    'Berhasil',
-                    'Stok keluar berhasil disimpan',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: AppColors.primary,
-                    colorText: Colors.white,
-                  );
+                  SnackbarHelper.success('Stok keluar berhasil disimpan');
+                  await Haptics.lightSuccess();
                 }
               },
-        icon: const Icon(Icons.save_outlined),
+        icon: const Icon(AppIcons.save_outlined),
         label: Text(
           c.isLoading.value ? 'Menyimpan…' : 'Simpan Stok Keluar',
         ),

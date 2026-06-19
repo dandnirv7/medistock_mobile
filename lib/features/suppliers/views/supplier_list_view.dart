@@ -4,10 +4,11 @@ import 'package:get/get.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../core/storage/auth_session.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/widgets/confirm_dialog.dart';
-import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/error_view.dart';
-import '../../../core/widgets/loading_overlay.dart';
+import '../../../core/widgets/data_async_view.dart';
 import '../controllers/supplier_list_controller.dart';
 import '../models/supplier_model.dart';
 
@@ -21,54 +22,37 @@ class SupplierListView extends GetView<SupplierListController> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              AppSpacing.sm,
+            ),
             child: TextField(
               onChanged: controller.setSearch,
               decoration: const InputDecoration(
                 hintText: 'Cari supplier',
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: Icon(AppIcons.search),
               ),
             ),
           ),
           const Divider(height: 1),
           Expanded(
-            child: Obx(() {
-              if (controller.isLoading.value && controller.items.isEmpty) {
-                return const LoadingOverlay();
-              }
-              if (controller.errorMessage.value != null &&
-                  controller.items.isEmpty) {
-                return ErrorView(
-                  message: controller.errorMessage.value!,
-                  onRetry: controller.refresh,
-                );
-              }
-              if (controller.items.isEmpty) {
-                return const EmptyState(
-                  icon: Icons.local_shipping_outlined,
-                  title: 'Belum ada supplier',
-                );
-              }
-              return RefreshIndicator(
-                onRefresh: controller.refresh,
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
-                  itemCount: controller.items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 6),
-                  itemBuilder: (context, i) {
-                    final s = controller.items[i];
-                    return _SupplierTile(
-                      supplier: s,
-                      onEdit: () => Get.toNamed(
-                        AppRoutes.supplierForm,
-                        arguments: s,
-                      ),
-                      onDelete: () => _confirmDelete(context, s),
-                    );
-                  },
-                ),
-              );
-            }),
+            child: RefreshIndicator(
+              onRefresh: controller.refresh,
+              child: DataAsyncView<SupplierModel>(
+                state: controller.state,
+                items: controller.items,
+                errorMessage: controller.errorMessage,
+                onRetry: controller.load,
+                emptyTitle: 'Belum ada supplier',
+                emptySubtitle: 'Tambahkan supplier untuk mulai mencatat pembelian',
+                emptyIcon: AppIcons.localShipping,
+                emptyActionLabel: 'Tambah Supplier',
+                onEmptyAction: () => Get.toNamed(AppRoutes.supplierForm),
+                builder: (context, list) => _SupplierList(items: list),
+              ),
+            ),
           ),
         ],
       ),
@@ -76,21 +60,47 @@ class SupplierListView extends GetView<SupplierListController> {
         () => Get.find<AuthSession>().userRx.value?.isAdmin == true
             ? FloatingActionButton.extended(
                 onPressed: () => Get.toNamed(AppRoutes.supplierForm),
-                icon: const Icon(Icons.add),
+                icon: const Icon(AppIcons.add),
                 label: const Text('Tambah'),
               )
             : const SizedBox.shrink(),
       ),
     );
   }
+}
 
-  Future<void> _confirmDelete(BuildContext context, SupplierModel s) async {
-    final ok = await ConfirmDialog.show(
-      context,
-      title: 'Hapus supplier?',
-      message: '${s.name} akan dinonaktifkan.',
+class _SupplierList extends StatelessWidget {
+  const _SupplierList({required this.items});
+  final List<SupplierModel> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<SupplierListController>();
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.xl,
+      ),
+      itemCount: items.length,
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+      itemBuilder: (context, i) {
+        final s = items[i];
+        return _SupplierTile(
+          supplier: s,
+          onEdit: () => Get.toNamed(AppRoutes.supplierForm, arguments: s),
+          onDelete: () async {
+            final ok = await ConfirmDialog.show(
+              context,
+              title: 'Hapus supplier?',
+              message: '${s.name} akan dinonaktifkan.',
+            );
+            if (ok) await controller.delete(s);
+          },
+        );
+      },
     );
-    if (ok) await controller.delete(s);
   }
 }
 
@@ -108,10 +118,10 @@ class _SupplierTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: AppRadii.border(AppRadii.md),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
@@ -122,14 +132,14 @@ class _SupplierTile extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: AppRadii.border(AppRadii.sm),
             ),
             child: const Icon(
-              Icons.local_shipping_outlined,
+              AppIcons.localShipping,
               color: AppColors.primary,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,29 +164,25 @@ class _SupplierTile extends StatelessWidget {
             ),
           ),
           Wrap(
-            spacing: 4,
+            spacing: AppSpacing.xs,
             children: [
               _CircleIconButton(
-                icon: Icons.call_outlined,
+                icon: AppIcons.call,
                 onTap: () {
                   if (supplier.phone != null && supplier.phone!.isNotEmpty) {
-                    Get.snackbar(
-                      'Telepon',
-                      supplier.phone!,
-                      snackPosition: SnackPosition.BOTTOM,
-                    );
+                    SnackbarHelper.success('Telepon ${supplier.phone}');
+                  } else {
+                    SnackbarHelper.error('Nomor telepon tidak tersedia');
                   }
                 },
               ),
               _CircleIconButton(
-                icon: Icons.message_outlined,
+                icon: AppIcons.message,
                 onTap: () {
                   if (supplier.phone != null && supplier.phone!.isNotEmpty) {
-                    Get.snackbar(
-                      'WhatsApp',
-                      supplier.phone!,
-                      snackPosition: SnackPosition.BOTTOM,
-                    );
+                    SnackbarHelper.success('WhatsApp ${supplier.phone}');
+                  } else {
+                    SnackbarHelper.error('Nomor WhatsApp tidak tersedia');
                   }
                 },
               ),
@@ -187,7 +193,6 @@ class _SupplierTile extends StatelessWidget {
     );
   }
 }
-
 
 class _CircleIconButton extends StatelessWidget {
   const _CircleIconButton({required this.icon, required this.onTap});
@@ -203,7 +208,7 @@ class _CircleIconButton extends StatelessWidget {
       child: Container(
         width: 36,
         height: 36,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: AppColors.primaryLight,
           shape: BoxShape.circle,
         ),

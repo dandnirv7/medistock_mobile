@@ -3,7 +3,9 @@ import 'package:get/get.dart';
 
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/snackbar_helper.dart';
 import '../controllers/login_controller.dart';
+import '../../../core/theme/app_icons.dart';
 
 class LoginView extends GetView<LoginController> {
   const LoginView({super.key});
@@ -47,7 +49,7 @@ class LoginView extends GetView<LoginController> {
                     decoration: const InputDecoration(
                       labelText: 'Email / Username',
                       hintText: 'Masukkan email atau username',
-                      prefixIcon: Icon(Icons.person_outline),
+                      prefixIcon: Icon(AppIcons.person_outline),
                     ),
                     textInputAction: TextInputAction.next,
                     keyboardType: TextInputType.text,
@@ -67,12 +69,12 @@ class LoginView extends GetView<LoginController> {
                       decoration: InputDecoration(
                         labelText: 'Password',
                         hintText: 'Masukkan password',
-                        prefixIcon: const Icon(Icons.lock_outline),
+                        prefixIcon: const Icon(AppIcons.lock_outline),
                         suffixIcon: IconButton(
                           icon: Icon(
                             controller.obscure.value
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
+                                ? AppIcons.visibilityOff_outlined
+                                : AppIcons.visibility,
                           ),
                           onPressed: controller.toggleObscure,
                         ),
@@ -92,11 +94,7 @@ class LoginView extends GetView<LoginController> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
-                        Get.snackbar(
-                          'Lupa Password',
-                          'Hubungi admin untuk reset password.',
-                          snackPosition: SnackPosition.BOTTOM,
-                        );
+                        SnackbarHelper.info('Hubungi admin untuk reset password.');
                       },
                       child: const Text('Lupa password?'),
                     ),
@@ -137,13 +135,9 @@ class LoginView extends GetView<LoginController> {
                   const SizedBox(height: 16),
                   OutlinedButton.icon(
                     onPressed: () {
-                      Get.snackbar(
-                        'Segera Hadir',
-                        'Login dengan Google akan diaktifkan pada rilis berikutnya.',
-                        snackPosition: SnackPosition.BOTTOM,
-                      );
+                      SnackbarHelper.info('Login dengan Google akan diaktifkan pada rilis berikutnya.');
                     },
-                    icon: const Icon(Icons.g_mobiledata, size: 24),
+                    icon: const Icon(AppIcons.g_mobiledata, size: 24),
                     label: const Text('Masuk dengan Google'),
                   ),
                   const SizedBox(height: 24),
@@ -201,7 +195,7 @@ class _HeroIllustration extends StatelessWidget {
             alignment: Alignment.center,
             children: [
               const Icon(
-                Icons.medical_services_outlined,
+                AppIcons.medicalServices_outlined,
                 size: 80,
                 color: AppColors.primary,
               ),
@@ -216,7 +210,7 @@ class _HeroIllustration extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
-                    Icons.add,
+                    AppIcons.add,
                     color: Colors.white,
                     size: 20,
                   ),

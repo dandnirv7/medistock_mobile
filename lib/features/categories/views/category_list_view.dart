@@ -4,10 +4,10 @@ import 'package:get/get.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../core/storage/auth_session.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/confirm_dialog.dart';
-import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/error_view.dart';
-import '../../../core/widgets/loading_overlay.dart';
+import '../../../core/widgets/data_async_view.dart';
 import '../controllers/category_list_controller.dart';
 import '../models/category_model.dart';
 
@@ -21,59 +21,37 @@ class CategoryListView extends GetView<CategoryListController> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              AppSpacing.sm,
+            ),
             child: TextField(
               onChanged: controller.setSearch,
               decoration: const InputDecoration(
                 hintText: 'Cari kategori',
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: Icon(AppIcons.search),
               ),
             ),
           ),
           const Divider(height: 1),
           Expanded(
-            child: Obx(() {
-              if (controller.isLoading.value && controller.items.isEmpty) {
-                return const LoadingOverlay();
-              }
-              if (controller.errorMessage.value != null &&
-                  controller.items.isEmpty) {
-                return ErrorView(
-                  message: controller.errorMessage.value!,
-                  onRetry: controller.refresh,
-                );
-              }
-              if (controller.items.isEmpty) {
-                return const EmptyState(
-                  icon: Icons.category_outlined,
-                  title: 'Belum ada kategori',
-                );
-              }
-              return RefreshIndicator(
-                onRefresh: controller.refresh,
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
-                  itemCount: controller.items.length + 1,
-                  separatorBuilder: (_, _) => const SizedBox(height: 6),
-                  itemBuilder: (context, i) {
-                    if (i == controller.items.length) {
-                      return _AddCategoryFooterCard(
-                        onTap: () => Get.toNamed(AppRoutes.categoryForm),
-                      );
-                    }
-                    final c = controller.items[i];
-                    return _CategoryTile(
-                      category: c,
-                      onTap: () => Get.toNamed(
-                        AppRoutes.categoryForm,
-                        arguments: c,
-                      ),
-                      onDelete: () => _confirmDelete(context, c),
-                    );
-                  },
-                ),
-              );
-            }),
+            child: RefreshIndicator(
+              onRefresh: controller.refresh,
+              child: DataAsyncView<CategoryModel>(
+                state: controller.state,
+                items: controller.items,
+                errorMessage: controller.errorMessage,
+                onRetry: controller.load,
+                emptyTitle: 'Belum ada kategori',
+                emptySubtitle: 'Tambahkan kategori untuk mengelompokkan obat',
+                emptyIcon: AppIcons.categoryOutlined,
+                emptyActionLabel: 'Tambah Kategori',
+                onEmptyAction: () => Get.toNamed(AppRoutes.categoryForm),
+                builder: (context, list) => _CategoryList(items: list),
+              ),
+            ),
           ),
         ],
       ),
@@ -81,21 +59,50 @@ class CategoryListView extends GetView<CategoryListController> {
         () => Get.find<AuthSession>().userRx.value?.isAdmin == true
             ? FloatingActionButton.extended(
                 onPressed: () => Get.toNamed(AppRoutes.categoryForm),
-                icon: const Icon(Icons.add),
+                icon: const Icon(AppIcons.add),
                 label: const Text('Tambah'),
               )
             : const SizedBox.shrink(),
       ),
     );
   }
+}
 
-  Future<void> _confirmDelete(BuildContext context, CategoryModel c) async {
-    final ok = await ConfirmDialog.show(
-      context,
-      title: 'Hapus kategori?',
-      message: '${c.name} akan dinonaktifkan.',
+class _CategoryList extends StatelessWidget {
+  const _CategoryList({required this.items});
+  final List<CategoryModel> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<CategoryListController>();
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.xl,
+      ),
+      itemCount: items.length,
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+      itemBuilder: (context, i) {
+        final c = items[i];
+        return _CategoryTile(
+          category: c,
+          onTap: () => Get.toNamed(
+            AppRoutes.categoryForm,
+            arguments: c,
+          ),
+          onDelete: () async {
+            final ok = await ConfirmDialog.show(
+              context,
+              title: 'Hapus kategori?',
+              message: '${c.name} akan dinonaktifkan.',
+            );
+            if (ok) await controller.delete(c);
+          },
+        );
+      },
     );
-    if (ok) await controller.delete(c);
   }
 }
 
@@ -113,10 +120,10 @@ class _CategoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: AppRadii.border(AppRadii.md),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
@@ -127,14 +134,14 @@ class _CategoryTile extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: AppRadii.border(AppRadii.sm),
             ),
             child: const Icon(
-              Icons.category_outlined,
+              AppIcons.categoryOutlined,
               color: AppColors.primary,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,68 +167,10 @@ class _CategoryTile extends StatelessWidget {
           IconButton(
             tooltip: 'Hapus',
             onPressed: onDelete,
-            icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+            icon: const Icon(AppIcons.delete, color: AppColors.danger),
           ),
-          const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+          const Icon(AppIcons.chevronRight, color: AppColors.textSecondary),
         ],
-      ),
-    );
-  }
-}
-
-
-class _AddCategoryFooterCard extends StatelessWidget {
-  const _AddCategoryFooterCard({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.add, color: AppColors.primary),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Tambah Kategori Baru',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Buat kategori untuk pengelompokan obat',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-          ],
-        ),
       ),
     );
   }
