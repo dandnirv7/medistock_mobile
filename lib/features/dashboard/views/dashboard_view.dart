@@ -2,22 +2,63 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../../../core/storage/auth_session.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../auth/data/repositories/auth_repository.dart';
-import '../../auth/models/user_model.dart';
-import '../../medicines/models/medicine_model.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/error_view.dart';
+import '../../../core/widgets/section_header.dart';
 import '../controllers/dashboard_controller.dart';
 import '../models/dashboard_summary_model.dart';
+import '../widgets/dashboard_stat_card.dart';
 
 class DashboardView extends GetView<DashboardController> {
   const DashboardView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final auth = Get.find<AuthSession>();
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const _Greeting(),
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleSpacing: AppSpacing.lg,
+        toolbarHeight: 72,
+        title: Obx(() {
+          final user = auth.userRx.value;
+          final name = user?.name.isNotEmpty == true
+              ? user!.name
+              : (user?.username ?? 'Admin Apotek');
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Halo, $name',
+                style: AppTextStyles.sectionHeader.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                'Selamat datang kembali!',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          );
+        }),
         actions: [
           IconButton(
             tooltip: 'Notifikasi',
@@ -25,7 +66,7 @@ class DashboardView extends GetView<DashboardController> {
             icon: Stack(
               clipBehavior: Clip.none,
               children: [
-                const Icon(Icons.notifications_outlined),
+                const Icon(AppIcons.alerts),
                 Positioned(
                   right: -2,
                   top: -2,
@@ -41,13 +82,14 @@ class DashboardView extends GetView<DashboardController> {
               ],
             ),
           ),
+          const SizedBox(width: AppSpacing.sm),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: controller.refreshAll,
         child: Obx(() {
           if (controller.isLoading.value && controller.summary.value == null) {
-            return const Center(child: CircularProgressIndicator());
+            return const _LoadingDashboard();
           }
           if (controller.errorMessage.value != null &&
               controller.summary.value == null) {
@@ -58,55 +100,46 @@ class DashboardView extends GetView<DashboardController> {
           }
           final summary = controller.summary.value;
           if (summary == null) {
-            return const Center(child: Text('Tidak ada data'));
+            return EmptyState(
+              title: 'Tidak ada data',
+              subtitle: 'Belum ada ringkasan yang dapat ditampilkan',
+              icon: AppIcons.dashboard,
+            );
           }
           return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              AppSpacing.xl,
+            ),
             children: [
               const _SearchBar(),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.lg),
               _StatGrid(summary: summary),
-              const SizedBox(height: 24),
-              _AlertSection(
+              const SizedBox(height: AppSpacing.xl),
+              _AlertCard(
                 title: 'Stok Rendah',
-                icon: Icons.warning_amber_outlined,
-                iconColor: AppColors.stockLow,
+                icon: AppIcons.lowStock,
+                accent: AppColors.stockLow,
                 count: summary.lowStockCount,
-                subtitle:
-                    '${summary.lowStockCount} obat dengan stok di bawah minimum',
-                emptyText: 'Tidak ada obat dengan stok rendah',
-                children: summary.lowStockMedicines
-                    .map(
-                      (m) => _AlertTile(
-                        title: m.name,
-                        subtitle: m.code,
-                        trailing: '${m.currentStock} ${m.unit}',
-                      ),
-                    )
-                    .toList(),
-                onSeeAll: () => Get.toNamed(AppRoutes.medicines),
+                subtitle: summary.lowStockCount == 0
+                    ? 'Tidak ada obat dengan stok rendah'
+                    : '${summary.lowStockCount} obat dengan stok di bawah minimum',
+                onTap: () => Get.toNamed(AppRoutes.medicines),
               ),
-              const SizedBox(height: 12),
-              _AlertSection(
+              const SizedBox(height: AppSpacing.md),
+              _AlertCard(
                 title: 'Hampir Expired',
-                icon: Icons.calendar_today,
-                iconColor: AppColors.expiredSoon,
+                icon: AppIcons.expiringSoon,
+                accent: AppColors.expiredSoon,
                 count: summary.expiredSoonCount,
-                subtitle:
-                    '${summary.expiredSoonCount} obat akan expired dalam 30 hari',
-                emptyText: 'Tidak ada obat hampir expired',
-                children: summary.expiredSoonMedicines
-                    .map(
-                      (m) => _AlertTile(
-                        title: m.name,
-                        subtitle: m.code,
-                        trailing: m.expiredStatus.label,
-                      ),
-                    )
-                    .toList(),
-                onSeeAll: () => Get.toNamed(AppRoutes.alerts),
+                subtitle: summary.expiredSoonCount == 0
+                    ? 'Tidak ada obat hampir expired'
+                    : '${summary.expiredSoonCount} obat akan expired dalam 30 hari',
+                onTap: () => Get.toNamed(AppRoutes.alerts),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.xl),
               const _QuickActions(),
             ],
           );
@@ -116,37 +149,54 @@ class DashboardView extends GetView<DashboardController> {
   }
 }
 
-class _Greeting extends StatelessWidget {
-  const _Greeting();
-
+class _LoadingDashboard extends StatelessWidget {
+  const _LoadingDashboard();
   @override
   Widget build(BuildContext context) {
-    final repo = Get.find<AuthRepository>();
-    return FutureBuilder<UserModel?>(
-      future: repo.currentUser(),
-      builder: (context, snap) {
-        final name = snap.data?.name ?? 'Admin Apotek';
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Halo, $name',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              'Selamat datang kembali!',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-            ),
-          ],
-        );
-      },
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      children: const [
+        _SearchBar(),
+        SizedBox(height: AppSpacing.lg),
+        _StatGridLoading(),
+        SizedBox(height: AppSpacing.xl),
+      ],
+    );
+  }
+}
+
+class _StatGridLoading extends StatelessWidget {
+  const _StatGridLoading();
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: AppSpacing.md,
+      mainAxisSpacing: AppSpacing.md,
+      childAspectRatio: 1.05,
+      children: const [
+        _StatCardSkeletonBox(),
+        _StatCardSkeletonBox(),
+        _StatCardSkeletonBox(),
+        _StatCardSkeletonBox(),
+      ],
+    );
+  }
+}
+
+class _StatCardSkeletonBox extends StatelessWidget {
+  const _StatCardSkeletonBox();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
     );
   }
 }
@@ -167,7 +217,7 @@ class _SearchBar extends StatelessWidget {
         onTap: () => Get.toNamed(AppRoutes.medicines),
         decoration: const InputDecoration(
           hintText: 'Cari obat, kode, atau supplier...',
-          prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
+          prefixIcon: Icon(AppIcons.search, color: AppColors.textSecondary),
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
@@ -190,172 +240,37 @@ class _StatGrid extends StatelessWidget {
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.4,
+      crossAxisSpacing: AppSpacing.md,
+      mainAxisSpacing: AppSpacing.md,
+      childAspectRatio: 1.05,
       children: [
-        _StatCard(
+        DashboardStatCard(
           label: 'Total Obat',
-          value: '${summary.totalMedicines}',
-          sub: 'Jenis',
-          icon: Icons.medication,
-          color: AppColors.primary,
-          bg: AppColors.primaryLight,
+          value: summary.totalMedicines,
+          icon: AppIcons.medicines,
+          accent: AppColors.primary,
+          unit: 'Jenis',
         ),
-        _StatCard(
+        DashboardStatCard(
           label: 'Stok Rendah',
-          value: '${summary.lowStockCount}',
-          sub: 'Obat',
-          icon: Icons.warning_amber,
-          color: AppColors.stockLow,
-          bg: const Color(0xFFFFF4E5),
+          value: summary.lowStockCount,
+          icon: AppIcons.lowStock,
+          accent: AppColors.stockLow,
+          unit: 'Obat',
         ),
-        _StatCard(
+        DashboardStatCard(
           label: 'Hampir Expired',
-          value: '${summary.expiredSoonCount}',
-          sub: 'Obat',
-          icon: Icons.calendar_today,
-          color: AppColors.expiredSoon,
-          bg: const Color(0xFFFFE7E7),
+          value: summary.expiredSoonCount,
+          icon: AppIcons.expiringSoon,
+          accent: AppColors.expiredSoon,
+          unit: 'Obat',
         ),
-        _StatCard(
+        DashboardStatCard(
           label: 'Supplier',
-          value: '${summary.totalSuppliers}',
-          sub: 'Supplier',
-          icon: Icons.local_shipping,
-          color: AppColors.info,
-          bg: const Color(0xFFE0EBFF),
-        ),
-      ],
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.sub,
-    required this.icon,
-    required this.color,
-    required this.bg,
-  });
-
-  final String label;
-  final String value;
-  final String sub;
-  final IconData icon;
-  final Color color;
-  final Color bg;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const Spacer(),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 3),
-                child: Text(
-                  sub,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AlertSection extends StatelessWidget {
-  const _AlertSection({
-    required this.title,
-    required this.icon,
-    required this.iconColor,
-    required this.count,
-    required this.subtitle,
-    required this.emptyText,
-    required this.children,
-    required this.onSeeAll,
-  });
-
-  final String title;
-  final IconData icon;
-  final Color iconColor;
-  final int count;
-  final String subtitle;
-  final String emptyText;
-  final List<Widget> children;
-  final VoidCallback onSeeAll;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Text(
-              'Peringatan',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const Spacer(),
-            TextButton(
-              onPressed: onSeeAll,
-              child: const Text('Lihat semua'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        _AlertCard(
-          title: title,
-          icon: icon,
-          iconColor: iconColor,
-          subtitle: subtitle,
-          onTap: onSeeAll,
+          value: summary.totalSuppliers,
+          icon: AppIcons.suppliers,
+          accent: AppColors.info,
+          unit: 'Supplier',
         ),
       ],
     );
@@ -366,80 +281,114 @@ class _AlertCard extends StatelessWidget {
   const _AlertCard({
     required this.title,
     required this.icon,
-    required this.iconColor,
+    required this.accent,
+    required this.count,
     required this.subtitle,
     required this.onTap,
   });
 
   final String title;
   final IconData icon;
-  final Color iconColor;
+  final Color accent;
+  final int count;
   final String subtitle;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: ListTile(
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: iconColor),
+    final hasCount = count > 0;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadii.border(AppRadii.lg),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.lg,
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(
-          subtitle,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 12,
-          ),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadii.border(AppRadii.lg),
+          border: Border.all(color: AppColors.border),
         ),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.12),
+                borderRadius: AppRadii.border(AppRadii.md),
+              ),
+              child: Icon(icon, color: accent, size: 20),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyles.cardTitle.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            if (hasCount)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                ),
+                child: Text(
+                  '$count',
+                  style: AppTextStyles.caption.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            const SizedBox(width: AppSpacing.sm),
+            Icon(
+              AppIcons.chevronRight,
+              color: hasCount ? AppColors.textSecondary : AppColors.border,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _AlertTile extends StatelessWidget {
-  const _AlertTile({
-    required this.title,
-    required this.subtitle,
-    required this.trailing,
-  });
-
-  final String title;
-  final String subtitle;
-  final String trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      dense: true,
-      title: Text(title, style: const TextStyle(fontSize: 14)),
-      subtitle: Text(
-        subtitle,
-        style: const TextStyle(fontSize: 12),
-      ),
-      trailing: Text(
-        trailing,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
+/// Soft tint backgrounds for the four quick-action buttons. Aligned with the
+/// UI reference: green for medicine + stock-in, soft pink for stock-out, soft
+/// blue for mutations. Defined locally to keep the dashboard view
+/// self-contained.
+const List<Color> _quickActionTints = [
+  AppColors.primaryLight, // Data Obat (green)
+  Color(0xFFE7F6EC),      // Stok Masuk (soft green)
+  Color(0xFFFDE2E2),      // Stok Keluar (soft pink)
+  Color(0xFFE2EAFC),      // Mutasi (soft blue)
+];
 
 class _QuickActions extends StatelessWidget {
   const _QuickActions();
@@ -449,48 +398,46 @@ class _QuickActions extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Aksi Cepat',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 12),
+        const SectionHeader(title: 'Aksi Cepat'),
+        const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
             Expanded(
               child: _QuickAction(
-                icon: Icons.medication,
+                icon: AppIcons.medicines,
                 label: 'Data Obat',
-                color: AppColors.primary,
+                tint: _quickActionTints[0],
+                iconColor: AppColors.primary,
                 onTap: () => Get.toNamed(AppRoutes.medicines),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _QuickAction(
-                icon: Icons.arrow_downward,
+                icon: AppIcons.stockIn,
                 label: 'Stok Masuk',
-                color: AppColors.success,
+                tint: _quickActionTints[1],
+                iconColor: AppColors.success,
                 onTap: () => Get.toNamed(AppRoutes.stockIn),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _QuickAction(
-                icon: Icons.arrow_upward,
+                icon: AppIcons.stockOut,
                 label: 'Stok Keluar',
-                color: AppColors.danger,
+                tint: _quickActionTints[2],
+                iconColor: AppColors.danger,
                 onTap: () => Get.toNamed(AppRoutes.stockOut),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _QuickAction(
-                icon: Icons.swap_horiz,
+                icon: AppIcons.stockMovements,
                 label: 'Mutasi',
-                color: AppColors.info,
+                tint: _quickActionTints[3],
+                iconColor: AppColors.info,
                 onTap: () => Get.toNamed(AppRoutes.stockMovements),
               ),
             ),
@@ -505,45 +452,47 @@ class _QuickAction extends StatelessWidget {
   const _QuickAction({
     required this.icon,
     required this.label,
-    required this.color,
+    required this.tint,
+    required this.iconColor,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
-  final Color color;
+  final Color tint;
+  final Color iconColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: AppRadii.border(AppRadii.lg),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
+          color: tint,
+          borderRadius: AppRadii.border(AppRadii.lg),
         ),
         child: Column(
           children: [
             Container(
               width: 40,
               height: 40,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                color: AppColors.surface,
+                borderRadius: AppRadii.border(AppRadii.md),
               ),
-              child: Icon(icon, color: color),
+              child: Icon(icon, color: iconColor),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               label,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -560,24 +509,6 @@ class _Error extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 56, color: AppColors.danger),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Coba lagi'),
-            ),
-          ],
-        ),
-      ),
-    );
+    return ErrorView(message: message, onRetry: onRetry);
   }
 }

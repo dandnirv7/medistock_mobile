@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/storage/auth_session.dart';
+import '../../core/utils/snackbar_helper.dart';
 import '../routes/app_routes.dart';
 
 class RoleGuard extends GetMiddleware {
@@ -30,13 +31,7 @@ class RoleGuard extends GetMiddleware {
 
   void _notifyStaffBlocked() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Get.closeCurrentSnackbar();
-      Get.snackbar(
-        'Akses Ditolak',
-        'Hanya admin yang dapat membuka halaman ini.',
-        snackPosition: SnackPosition.BOTTOM,
-        margin: const EdgeInsets.all(16),
-      );
+      SnackbarHelper.error('Hanya admin yang dapat membuka halaman ini.');
     });
   }
 }

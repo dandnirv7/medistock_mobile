@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../controllers/splash_controller.dart';
+import '../../../core/theme/app_icons.dart';
 
 class SplashView extends GetView<SplashController> {
   const SplashView({super.key});
@@ -91,7 +92,7 @@ class _Logo extends StatelessWidget {
       ),
       child: const Center(
         child: Icon(
-          Icons.local_pharmacy,
+          AppIcons.localPharmacy,
           color: AppColors.primary,
           size: 64,
         ),

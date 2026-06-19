@@ -13,6 +13,7 @@ import '../../profile/views/profile_view.dart';
 import '../../stock_movements/bindings/stock_movement_binding.dart';
 import '../../stock_movements/views/stock_level_view.dart';
 import '../../stock_movements/views/stock_movement_list_view.dart';
+import '../../../core/theme/app_icons.dart';
 
 class HomeShellController extends GetxController {
   /// Active tab index within the role-filtered `tabs` list.
@@ -47,37 +48,37 @@ class HomeShellController extends GetxController {
     final list = <HomeTabSpec>[
       const HomeTabSpec(
         label: 'Dashboard',
-        icon: Icons.dashboard_outlined,
-        activeIcon: Icons.dashboard,
+        icon: AppIcons.dashboardOutlined,
+        activeIcon: AppIcons.dashboard,
         route: AppRoutes.dashboard,
         index: 0,
       ),
       if (isAdmin)
         const HomeTabSpec(
           label: 'Obat',
-          icon: Icons.medication_outlined,
-          activeIcon: Icons.medication,
+          icon: AppIcons.medicationOutlined,
+          activeIcon: AppIcons.medication,
           route: AppRoutes.medicines,
           index: 1,
         ),
       const HomeTabSpec(
         label: 'Stok',
-        icon: Icons.inventory_2_outlined,
-        activeIcon: Icons.inventory_2,
+        icon: AppIcons.inventory2_outlined,
+        activeIcon: AppIcons.inventory2,
         route: AppRoutes.stockLevels,
         index: 2,
       ),
       const HomeTabSpec(
         label: 'Riwayat',
-        icon: Icons.history_outlined,
-        activeIcon: Icons.history,
+        icon: AppIcons.history_outlined,
+        activeIcon: AppIcons.history,
         route: AppRoutes.stockMovements,
         index: 3,
       ),
       const HomeTabSpec(
         label: 'Profil',
-        icon: Icons.person_outline,
-        activeIcon: Icons.person,
+        icon: AppIcons.person_outline,
+        activeIcon: AppIcons.person,
         route: AppRoutes.profile,
         index: 4,
       ),
