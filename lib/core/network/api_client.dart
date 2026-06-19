@@ -58,6 +58,39 @@ class ApiClient {
   /// without re-running the platform-aware resolver.
   String get resolvedBaseUrl => _dio.options.baseUrl;
 
+  // ---------------------------------------------------------------------------
+  // Per-resource request cancellation
+  //
+  // The mobile UI fires overlapping requests for the same resource (the
+  // Alerts screen swaps tabs faster than the previous medicines query
+  // completes). Without cancellation, a slow response to a stale filter
+  // can race in and overwrite the state of the most recent request.
+  //
+  // Callers grab a fresh [CancelToken] via [beginMedicinesRequest] before
+  // each call. Any token previously returned for the medicines resource is
+  // cancelled, so the in-flight request bails out at the network layer.
+  // ---------------------------------------------------------------------------
+  CancelToken? _activeMedicinesToken;
+
+  /// Returns a fresh [CancelToken] for a /medicines request and cancels any
+  /// previous medicines request that is still in flight. The token is
+  /// cleared automatically once the request that owns it completes.
+  CancelToken beginMedicinesRequest() {
+    // Cancel any in-flight medicines request before issuing a new one, so a
+    // stale response cannot race in and overwrite the latest filter state.
+    _activeMedicinesToken?.cancel('superseded');
+    final token = CancelToken();
+    _activeMedicinesToken = token;
+    return token;
+  }
+
+  /// Cancels any in-flight medicines request. Safe to call from controller
+  /// `onClose()` and safe to call multiple times.
+  void cancelActiveMedicinesRequest() {
+    _activeMedicinesToken?.cancel('superseded');
+    _activeMedicinesToken = null;
+  }
+
   Interceptor _buildAuthInterceptor() {
     return InterceptorsWrapper(
       onRequest: (options, handler) async {
@@ -75,14 +108,16 @@ class ApiClient {
       onResponse: (response, handler) {
         final data = response.data;
         if (data is Map<String, dynamic> && data['success'] == false) {
+          final apiError = ApiException.fromResponse(
+            data,
+            statusCode: response.statusCode,
+          );
           handler.reject(
             DioException(
               requestOptions: response.requestOptions,
               response: response,
-              error: ApiException.fromResponse(
-                data,
-                statusCode: response.statusCode,
-              ),
+              error: apiError,
+              message: apiError.message,
               type: DioExceptionType.badResponse,
             ),
           );
@@ -95,14 +130,16 @@ class ApiClient {
         if (response?.data is Map<String, dynamic>) {
           final body = response!.data as Map<String, dynamic>;
           if (body['success'] == false) {
+            final apiError = ApiException.fromResponse(
+              body,
+              statusCode: response.statusCode,
+            );
             handler.next(
               DioException(
                 requestOptions: error.requestOptions,
                 response: response,
-                error: ApiException.fromResponse(
-                  body,
-                  statusCode: response.statusCode,
-                ),
+                error: apiError,
+                message: apiError.message,
                 type: DioExceptionType.badResponse,
               ),
             );
@@ -131,8 +168,18 @@ class ApiClient {
       },
       onError: (error, handler) {
         if (kDebugMode) {
+          // Log everything we have so failures can be diagnosed from the
+          // console alone: status, the ApiException payload, and the raw
+          // response body. `error.message` is unreliable (it is `null` for
+          // DioExceptions we reject ourselves) so we read from `error.error`
+          // and `error.response.data` instead.
           debugPrint(
-              '✗ ${error.requestOptions.method} ${error.requestOptions.uri}: ${error.message}');
+            '✗ ${error.requestOptions.method} ${error.requestOptions.uri} '
+            '| type=${error.type} '
+            '| status=${error.response?.statusCode} '
+            '| api=${error.error} '
+            '| body=${error.response?.data}',
+          );
         }
         handler.next(error);
       },
