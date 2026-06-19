@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../core/theme/app_colors.dart';
 import '../controllers/medicine_form_controller.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../../core/widgets/app_date_picker.dart';
 
 class MedicineFormView extends GetView<MedicineFormController> {
   const MedicineFormView({super.key});
@@ -42,18 +43,24 @@ class MedicineFormView extends GetView<MedicineFormController> {
                   ),
                 ),
               TextFormField(
-                controller: controller.codeCtrl,
-                decoration: const InputDecoration(labelText: 'Kode / SKU'),
-                textCapitalization: TextCapitalization.characters,
+                controller: controller.nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nama Obat *',
+                  hintText: 'Masukkan nama obat',
+                ),
                 validator: (v) =>
-                    controller.requiredText(v, 'Kode'),
+                    controller.requiredText(v, 'Nama obat'),
               ),
               const SizedBox(height: 12),
               TextFormField(
-                controller: controller.nameCtrl,
-                decoration: const InputDecoration(labelText: 'Nama Obat'),
+                controller: controller.codeCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Kode Obat *',
+                  hintText: 'Mis. PAR-500',
+                ),
+                textCapitalization: TextCapitalization.characters,
                 validator: (v) =>
-                    controller.requiredText(v, 'Nama obat'),
+                    controller.requiredText(v, 'Kode'),
               ),
               const SizedBox(height: 12),
               _Dropdown<String>(
@@ -87,13 +94,22 @@ class MedicineFormView extends GetView<MedicineFormController> {
                 hint: 'Pilih supplier (opsional)',
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: controller.unitCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Satuan (Tablet, Botol, dll)',
-                ),
-                validator: (v) =>
-                    controller.requiredText(v, 'Satuan'),
+              _Dropdown<String>(
+                label: 'Satuan',
+                value: controller.unit.value,
+                items: controller.unitOptions
+                    .map(
+                      (u) => DropdownMenuItem(
+                        value: u,
+                        child: Text(u),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) controller.unit.value = v;
+                },
+                hint: 'Pilih satuan',
+                required: true,
               ),
               const SizedBox(height: 12),
               Row(
@@ -132,38 +148,48 @@ class MedicineFormView extends GetView<MedicineFormController> {
                 ],
               ),
               const SizedBox(height: 12),
-              if (controller.editing == null)
-                TextFormField(
-                  controller: controller.currentStockCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Stok Awal',
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (controller.editing == null) ...[
+                    Expanded(
+                      child: TextFormField(
+                        controller: controller.currentStockCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Stok Saat Ini',
+                        ),
+                        validator: (v) => controller.numberText(
+                          v,
+                          'Stok saat ini',
+                          integer: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: TextFormField(
+                      controller: controller.minimumStockCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Stok Minimum',
+                      ),
+                      validator: (v) => controller.numberText(
+                        v,
+                        'Stok minimum',
+                        integer: true,
+                      ),
+                    ),
                   ),
-                  validator: (v) => controller.numberText(
-                    v,
-                    'Stok awal',
-                    integer: true,
-                  ),
-                ),
-              if (controller.editing == null) const SizedBox(height: 12),
-              TextFormField(
-                controller: controller.minimumStockCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Stok Minimum',
-                ),
-                validator: (v) => controller.numberText(
-                  v,
-                  'Stok minimum',
-                  integer: true,
-                ),
+                ],
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: controller.expiredDateCtrl,
                 readOnly: true,
                 decoration: InputDecoration(
-                  labelText: 'Tanggal Expired',
+                  labelText: 'Tanggal Expired *',
                   suffixIcon: IconButton(
                     onPressed: () => _pickDate(context),
                     icon: const Icon(AppIcons.calendar_today_outlined),
@@ -206,11 +232,10 @@ class MedicineFormView extends GetView<MedicineFormController> {
   }
 
   Future<void> _pickDate(BuildContext context) async {
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await AppDatePicker.show(
+      context,
       initialDate: controller.expiredDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      title: 'Tanggal Expired',
     );
     if (picked != null) controller.setExpiredDate(picked);
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../controllers/supplier_form_controller.dart';
 
 class SupplierFormView extends GetView<SupplierFormController> {
@@ -13,7 +14,7 @@ class SupplierFormView extends GetView<SupplierFormController> {
       appBar: AppBar(
         title: Obx(() => Text(
               controller.editing == null
-                  ? 'Tambah Supplier'
+                  ? 'Form Supplier'
                   : 'Edit Supplier',
             )),
       ),
@@ -41,7 +42,10 @@ class SupplierFormView extends GetView<SupplierFormController> {
                 ),
               TextFormField(
                 controller: controller.nameCtrl,
-                decoration: const InputDecoration(labelText: 'Nama Supplier'),
+                decoration: const InputDecoration(
+                  labelText: 'Nama Supplier',
+                  hintText: 'Masukkan nama supplier',
+                ),
                 validator: (v) =>
                     controller.requiredText(v, 'Nama'),
               ),
@@ -49,26 +53,38 @@ class SupplierFormView extends GetView<SupplierFormController> {
               TextFormField(
                 controller: controller.phoneCtrl,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Telepon'),
+                decoration: const InputDecoration(
+                  labelText: 'Telepon',
+                  hintText: 'Masukkan nomor telepon',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: controller.addressCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Alamat',
+                  hintText: 'Masukkan alamat lengkap',
+                ),
+                maxLines: 3,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: controller.emailCtrl,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email'),
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  hintText: 'Masukkan email',
+                ),
                 validator: controller.emailValidator,
               ),
               const SizedBox(height: 12),
               TextFormField(
-                controller: controller.addressCtrl,
-                decoration: const InputDecoration(labelText: 'Alamat'),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
                 controller: controller.notesCtrl,
-                decoration: const InputDecoration(labelText: 'Catatan'),
-                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Catatan',
+                  hintText: 'Masukkan catatan (opsional)',
+                ),
+                maxLines: 3,
               ),
               if (controller.editing != null) ...[
                 const SizedBox(height: 12),
@@ -81,25 +97,28 @@ class SupplierFormView extends GetView<SupplierFormController> {
               ],
               const SizedBox(height: 24),
               Obx(
-                () => ElevatedButton(
+                () => ElevatedButton.icon(
                   onPressed: controller.isLoading.value
                       ? null
                       : () async {
                           final ok = await controller.submit();
                           if (ok) Get.back();
                         },
-                  child: controller.isLoading.value
+                  icon: controller.isLoading.value
                       ? const SizedBox(
-                          width: 22,
-                          height: 22,
+                          width: 18,
+                          height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: Colors.white,
                           ),
                         )
-                      : Text(
-                          controller.editing == null ? 'Simpan' : 'Perbarui',
-                        ),
+                      : const Icon(AppIcons.save_outlined),
+                  label: Text(
+                    controller.isLoading.value
+                        ? 'Menyimpan…'
+                        : 'Simpan Supplier',
+                  ),
                 ),
               ),
             ],

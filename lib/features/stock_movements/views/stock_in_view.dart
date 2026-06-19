@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/haptics.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/widgets/app_date_picker.dart';
 import '../../medicines/models/medicine_model.dart';
 import '../../suppliers/models/supplier_model.dart';
 import '../controllers/stock_in_controller.dart';
@@ -233,15 +234,17 @@ class _DateField extends StatelessWidget {
       controller: c.dateCtrl,
       readOnly: true,
       onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
+        final picked = await AppDatePicker.show(
+          context,
           initialDate: c.transactionDate,
-          firstDate: DateTime(2000),
-          lastDate: DateTime(2100),
+          title: 'Tanggal Transaksi',
         );
         if (picked != null) c.setDate(picked);
       },
-      decoration: const InputDecoration(labelText: 'Tanggal Transaksi'),
+      decoration: const InputDecoration(
+        labelText: 'Tanggal Transaksi',
+        suffixIcon: Icon(AppIcons.calendar_today_outlined),
+      ),
     );
   }
 }

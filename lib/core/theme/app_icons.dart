@@ -10,6 +10,7 @@ class AppIcons {
 
   // -- Domain icons --
   static const IconData dashboard = LucideIcons.layoutDashboard;
+  static const IconData home = LucideIcons.home;
   static const IconData medicines = LucideIcons.pill;
   static const IconData categories = LucideIcons.tags;
   static const IconData suppliers = LucideIcons.truck;

@@ -7,9 +7,14 @@ import '../../auth/models/user_model.dart';
 import '../../dashboard/bindings/dashboard_binding.dart';
 import '../../dashboard/views/dashboard_view.dart';
 import '../../medicines/bindings/medicine_binding.dart';
+import '../../medicines/controllers/medicine_list_controller.dart';
+import '../../medicines/data/repositories/medicine_repository.dart'
+    show MedicineExpiredFilter;
 import '../../medicines/views/medicine_list_view.dart';
 import '../../profile/bindings/profile_binding.dart';
 import '../../profile/views/profile_view.dart';
+import '../../suppliers/bindings/supplier_binding.dart';
+import '../../suppliers/views/supplier_list_view.dart';
 import '../../stock_movements/bindings/stock_movement_binding.dart';
 import '../../stock_movements/views/stock_level_view.dart';
 import '../../stock_movements/views/stock_movement_list_view.dart';
@@ -48,8 +53,8 @@ class HomeShellController extends GetxController {
     final list = <HomeTabSpec>[
       const HomeTabSpec(
         label: 'Dashboard',
-        icon: AppIcons.dashboardOutlined,
-        activeIcon: AppIcons.dashboard,
+        icon: AppIcons.home,
+        activeIcon: AppIcons.home,
         route: AppRoutes.dashboard,
         index: 0,
       ),
@@ -61,26 +66,38 @@ class HomeShellController extends GetxController {
           route: AppRoutes.medicines,
           index: 1,
         ),
-      const HomeTabSpec(
-        label: 'Stok',
-        icon: AppIcons.inventory2_outlined,
-        activeIcon: AppIcons.inventory2,
-        route: AppRoutes.stockLevels,
-        index: 2,
-      ),
+      if (isAdmin)
+        const HomeTabSpec(
+          label: 'Supplier',
+          icon: AppIcons.localShippingOutlined,
+          activeIcon: AppIcons.localShipping,
+          route: AppRoutes.suppliers,
+          index: 2,
+        ),
+      // Admins read current stock per-medicine in the Obat list and on the
+      // dashboard cards, so a dedicated Stok tab is redundant for them. Staff
+      // have no Obat tab, so they keep Stok as their primary stock view.
+      if (!isAdmin)
+        const HomeTabSpec(
+          label: 'Stok',
+          icon: AppIcons.inventory2_outlined,
+          activeIcon: AppIcons.inventory2,
+          route: AppRoutes.stockLevels,
+          index: 3,
+        ),
       const HomeTabSpec(
         label: 'Riwayat',
         icon: AppIcons.history_outlined,
         activeIcon: AppIcons.history,
         route: AppRoutes.stockMovements,
-        index: 3,
+        index: 4,
       ),
       const HomeTabSpec(
         label: 'Profil',
         icon: AppIcons.person_outline,
         activeIcon: AppIcons.person,
         route: AppRoutes.profile,
-        index: 4,
+        index: 5,
       ),
     ];
     tabs.assignAll(list);
@@ -107,6 +124,32 @@ class HomeShellController extends GetxController {
     currentIndex.value = index;
   }
 
+  /// Switch to the Obat (medicines) tab and pre-apply a filter. Used by the
+  /// dashboard alert cards so tapping "Stok Rendah" / "Hampir Expired" lands
+  /// the user on the medicine list already filtered to the relevant subset
+  /// instead of an unfiltered list.
+  void openMedicines({
+    bool lowStockOnly = false,
+    MedicineExpiredFilter expired = MedicineExpiredFilter.all,
+  }) {
+    final idx = tabs.indexWhere((t) => t.route == AppRoutes.medicines);
+    if (idx < 0) {
+      // Staff role has no medicines tab; fall back to a pushed route.
+      Get.toNamed(AppRoutes.medicines);
+      return;
+    }
+    changeTab(idx);
+    if (Get.isRegistered<MedicineListController>()) {
+      final c = Get.find<MedicineListController>();
+      c.search.value = '';
+      c.categoryFilter.value = null;
+      c.supplierFilter.value = null;
+      c.lowStockOnly.value = lowStockOnly;
+      c.expiredFilter.value = expired;
+      c.load();
+    }
+  }
+
   /// Tracks which tab bindings have been fired in this shell lifetime
   /// so we don't call `dependencies()` more than once per tab. The
   /// bindings themselves use `Get.lazyPut(..., fenix: true)`, so even
@@ -131,6 +174,8 @@ class HomeShellController extends GetxController {
         return const DashboardView();
       case AppRoutes.medicines:
         return const MedicineListView();
+      case AppRoutes.suppliers:
+        return const SupplierListView();
       case AppRoutes.stockLevels:
         return const StockLevelView();
       case AppRoutes.stockMovements:
@@ -152,6 +197,9 @@ class HomeShellController extends GetxController {
       case AppRoutes.medicines:
       case AppRoutes.stockLevels:
         MedicineBinding().dependencies();
+        break;
+      case AppRoutes.suppliers:
+        SupplierBinding().dependencies();
         break;
       case AppRoutes.stockMovements:
         StockMovementBinding().dependencies();

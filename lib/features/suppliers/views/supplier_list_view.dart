@@ -146,20 +146,34 @@ class _SupplierTile extends StatelessWidget {
               children: [
                 Text(
                   supplier.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
-                if (supplier.phone != null || supplier.email != null)
+                if (supplier.phone != null && supplier.phone!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
                   Text(
-                    [supplier.phone, supplier.email]
-                        .where((e) => e != null && e.isNotEmpty)
-                        .join(' • '),
+                    supplier.phone!,
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
                     ),
-                    maxLines: 1,
+                  ),
+                ],
+                if (supplier.address != null &&
+                    supplier.address!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    supplier.address!,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                ],
               ],
             ),
           ),

@@ -28,6 +28,7 @@ class AppColors {
   static const Color warning = Color(0xFFF59E0B);
   static const Color danger = Color(0xFFDC2626);
   static const Color info = Color(0xFF2563EB);
+  static const Color violet = Color(0xFF7C3AED); // supplier accent (mockup)
 
   // -- Stock status aliases (req 2.4, 3.2) --
   static const Color stockSafe = success; // safe stock

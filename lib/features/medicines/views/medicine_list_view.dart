@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/data_async_view.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../core/storage/auth_session.dart';
@@ -50,6 +51,7 @@ class MedicineListView extends GetView<MedicineListController> {
           const SizedBox(height: AppSpacing.sm),
           const _FilterChipRow(),
           const Divider(height: 1),
+          const _ResultBar(),
           Expanded(
             child: RefreshIndicator(
               onRefresh: controller.refresh,
@@ -108,6 +110,7 @@ class _InlineSearchField extends StatefulWidget {
 class _InlineSearchFieldState extends State<_InlineSearchField> {
   late final TextEditingController _textCtrl;
   late final MedicineListController _ctrl;
+  Worker? _syncWorker;
 
   @override
   void initState() {
@@ -115,9 +118,11 @@ class _InlineSearchFieldState extends State<_InlineSearchField> {
     _ctrl = Get.find<MedicineListController>();
     _textCtrl = TextEditingController(text: _ctrl.search.value);
     // Pick up programmatic changes to the controller's search term
-    // (e.g. from a future "clear filters" button) so the field stays
-    // accurate.
-    ever(_ctrl.search, (String value) {
+    // (e.g. from a "clear filters" action or a dashboard shortcut) so the
+    // field stays accurate. The worker is cancelled in [dispose] and guarded
+    // by [mounted] so it can never touch a disposed TextEditingController.
+    _syncWorker = ever<String>(_ctrl.search, (value) {
+      if (!mounted) return;
       if (_textCtrl.text != value) {
         _textCtrl.value = TextEditingValue(
           text: value,
@@ -129,6 +134,7 @@ class _InlineSearchFieldState extends State<_InlineSearchField> {
 
   @override
   void dispose() {
+    _syncWorker?.dispose();
     _textCtrl.dispose();
     super.dispose();
   }
@@ -377,8 +383,102 @@ class _MedicineList extends StatelessWidget {
         medicine: items[i],
         onTap: () => Get.toNamed(
           AppRoutes.medicineDetail,
+          arguments: items[i],
           parameters: {'id': items[i].id},
         ),
+      ),
+    );
+  }
+}
+
+class _ResultBar extends StatelessWidget {
+  const _ResultBar();
+
+  MedicineListController get controller => Get.find<MedicineListController>();
+
+  static const List<({String label, String by, String order})> _sortOptions = [
+    (label: 'Terbaru', by: 'createdAt', order: 'desc'),
+    (label: 'Nama (A-Z)', by: 'name', order: 'asc'),
+    (label: 'Nama (Z-A)', by: 'name', order: 'desc'),
+    (label: 'Stok terbanyak', by: 'currentStock', order: 'desc'),
+    (label: 'Stok paling sedikit', by: 'currentStock', order: 'asc'),
+    (label: 'Mendekati expired', by: 'expiredDate', order: 'asc'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.xs,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Obx(
+              () => Text(
+                'Total ${controller.total.value} obat',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          Obx(() {
+            final current = _sortOptions.firstWhere(
+              (o) =>
+                  o.by == controller.sortBy.value &&
+                  o.order == controller.sortOrder.value,
+              orElse: () => _sortOptions.first,
+            );
+            return PopupMenuButton<int>(
+              tooltip: 'Urutkan',
+              position: PopupMenuPosition.under,
+              onSelected: (i) => controller.setSort(
+                _sortOptions[i].by,
+                _sortOptions[i].order,
+              ),
+              itemBuilder: (context) => [
+                for (var i = 0; i < _sortOptions.length; i++)
+                  PopupMenuItem<int>(
+                    value: i,
+                    child: Row(
+                      children: [
+                        Expanded(child: Text(_sortOptions[i].label)),
+                        if (_sortOptions[i].by == current.by &&
+                            _sortOptions[i].order == current.order)
+                          const Icon(
+                            AppIcons.check,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Urutkan',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Icon(
+                    AppIcons.chevronDown,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -555,6 +655,21 @@ class _MedicineCard extends StatelessWidget {
                     fontSize: 11,
                   ),
                 ),
+                if (medicine.expiredDate != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Exp: ${DateFormatter.toDisplay(medicine.expiredDate!)}',
+                    style: TextStyle(
+                      color: medicine.isExpired
+                          ? AppColors.expired
+                          : (medicine.isExpiredSoon
+                              ? AppColors.expiredSoon
+                              : AppColors.textSecondary),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ],
             ),
           ],

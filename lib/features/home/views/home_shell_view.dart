@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../controllers/home_shell_controller.dart';
@@ -29,23 +28,40 @@ class HomeShellView extends GetView<HomeShellController> {
               _TabRootView(tabIndex: i),
           ],
         ),
-        bottomNavigationBar: SalomonBottomBar(
-          currentIndex: index,
-          onTap: controller.changeTab,
-          backgroundColor: AppColors.surface,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: AppColors.textSecondary,
-          itemShape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(40),
+        bottomNavigationBar: Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            border: Border(
+              top: BorderSide(color: AppColors.border, width: 1),
+            ),
           ),
-          items: [
-            for (final t in controller.tabs)
-              SalomonBottomBarItem(
-                icon: Icon(t.icon),
-                activeIcon: Icon(t.activeIcon),
-                title: Text(t.label),
-              ),
-          ],
+          child: SafeArea(
+            top: false,
+            child: BottomNavigationBar(
+              currentIndex: index,
+              onTap: controller.changeTab,
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              selectedItemColor: AppColors.primary,
+              unselectedItemColor: AppColors.textSecondary,
+              showSelectedLabels: true,
+              showUnselectedLabels: true,
+              selectedFontSize: 11,
+              unselectedFontSize: 11,
+              selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
+              unselectedLabelStyle:
+                  const TextStyle(fontWeight: FontWeight.w500),
+              items: [
+                for (final t in controller.tabs)
+                  BottomNavigationBarItem(
+                    icon: Icon(t.icon),
+                    activeIcon: Icon(t.activeIcon),
+                    label: t.label,
+                  ),
+              ],
+            ),
+          ),
         ),
       );
     });

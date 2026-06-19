@@ -10,6 +10,9 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../home/controllers/home_shell_controller.dart';
+import '../../medicines/data/repositories/medicine_repository.dart'
+    show MedicineExpiredFilter;
 import '../controllers/dashboard_controller.dart';
 import '../models/dashboard_summary_model.dart';
 import '../widgets/dashboard_stat_card.dart';
@@ -34,26 +37,47 @@ class DashboardView extends GetView<DashboardController> {
           final name = user?.name.isNotEmpty == true
               ? user!.name
               : (user?.username ?? 'Admin Apotek');
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+          return Row(
             children: [
-              Text(
-                'Halo, $name',
-                style: AppTextStyles.sectionHeader.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: AppRadii.border(AppRadii.md),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                child: const Icon(
+                  AppIcons.medicalServices,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
-              const SizedBox(height: 2),
-              const Text(
-                'Selamat datang kembali!',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Halo, $name',
+                      style: AppTextStyles.sectionHeader.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Selamat datang kembali!',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -118,6 +142,20 @@ class DashboardView extends GetView<DashboardController> {
               const SizedBox(height: AppSpacing.lg),
               _StatGrid(summary: summary),
               const SizedBox(height: AppSpacing.xl),
+              SectionHeader(
+                title: 'Peringatan',
+                action: GestureDetector(
+                  onTap: () => Get.toNamed(AppRoutes.alerts),
+                  child: Text(
+                    'Lihat semua',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
               _AlertCard(
                 title: 'Stok Rendah',
                 icon: AppIcons.lowStock,
@@ -126,7 +164,8 @@ class DashboardView extends GetView<DashboardController> {
                 subtitle: summary.lowStockCount == 0
                     ? 'Tidak ada obat dengan stok rendah'
                     : '${summary.lowStockCount} obat dengan stok di bawah minimum',
-                onTap: () => Get.toNamed(AppRoutes.medicines),
+                onTap: () => Get.find<HomeShellController>()
+                    .openMedicines(lowStockOnly: true),
               ),
               const SizedBox(height: AppSpacing.md),
               _AlertCard(
@@ -137,7 +176,8 @@ class DashboardView extends GetView<DashboardController> {
                 subtitle: summary.expiredSoonCount == 0
                     ? 'Tidak ada obat hampir expired'
                     : '${summary.expiredSoonCount} obat akan expired dalam 30 hari',
-                onTap: () => Get.toNamed(AppRoutes.alerts),
+                onTap: () => Get.find<HomeShellController>()
+                    .openMedicines(expired: MedicineExpiredFilter.soon),
               ),
               const SizedBox(height: AppSpacing.xl),
               const _QuickActions(),
@@ -214,7 +254,7 @@ class _SearchBar extends StatelessWidget {
       ),
       child: TextField(
         readOnly: true,
-        onTap: () => Get.toNamed(AppRoutes.medicines),
+        onTap: () => Get.find<HomeShellController>().openMedicines(),
         decoration: const InputDecoration(
           hintText: 'Cari obat, kode, atau supplier...',
           prefixIcon: Icon(AppIcons.search, color: AppColors.textSecondary),
@@ -262,14 +302,14 @@ class _StatGrid extends StatelessWidget {
           label: 'Hampir Expired',
           value: summary.expiredSoonCount,
           icon: AppIcons.expiringSoon,
-          accent: AppColors.expiredSoon,
+          accent: AppColors.expired,
           unit: 'Obat',
         ),
         DashboardStatCard(
           label: 'Supplier',
           value: summary.totalSuppliers,
           icon: AppIcons.suppliers,
-          accent: AppColors.info,
+          accent: AppColors.violet,
           unit: 'Supplier',
         ),
       ],
@@ -379,15 +419,15 @@ class _AlertCard extends StatelessWidget {
   }
 }
 
-/// Soft tint backgrounds for the four quick-action buttons. Aligned with the
-/// UI reference: green for medicine + stock-in, soft pink for stock-out, soft
-/// blue for mutations. Defined locally to keep the dashboard view
-/// self-contained.
+/// Soft tint backgrounds for the four quick-action buttons. The UI reference
+/// uses a single calm green family for all four actions (medicine, stock-in,
+/// stock-out, mutations), so the tiles share one light-green tint and a green
+/// icon — only the glyph differs.
 const List<Color> _quickActionTints = [
-  AppColors.primaryLight, // Data Obat (green)
-  Color(0xFFE7F6EC),      // Stok Masuk (soft green)
-  Color(0xFFFDE2E2),      // Stok Keluar (soft pink)
-  Color(0xFFE2EAFC),      // Mutasi (soft blue)
+  AppColors.primaryLight,
+  AppColors.primaryLight,
+  AppColors.primaryLight,
+  AppColors.primaryLight,
 ];
 
 class _QuickActions extends StatelessWidget {
@@ -408,7 +448,7 @@ class _QuickActions extends StatelessWidget {
                 label: 'Data Obat',
                 tint: _quickActionTints[0],
                 iconColor: AppColors.primary,
-                onTap: () => Get.toNamed(AppRoutes.medicines),
+                onTap: () => Get.find<HomeShellController>().openMedicines(),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -417,7 +457,7 @@ class _QuickActions extends StatelessWidget {
                 icon: AppIcons.stockIn,
                 label: 'Stok Masuk',
                 tint: _quickActionTints[1],
-                iconColor: AppColors.success,
+                iconColor: AppColors.primary,
                 onTap: () => Get.toNamed(AppRoutes.stockIn),
               ),
             ),
@@ -427,7 +467,7 @@ class _QuickActions extends StatelessWidget {
                 icon: AppIcons.stockOut,
                 label: 'Stok Keluar',
                 tint: _quickActionTints[2],
-                iconColor: AppColors.danger,
+                iconColor: AppColors.primary,
                 onTap: () => Get.toNamed(AppRoutes.stockOut),
               ),
             ),
@@ -437,7 +477,7 @@ class _QuickActions extends StatelessWidget {
                 icon: AppIcons.stockMovements,
                 label: 'Mutasi',
                 tint: _quickActionTints[3],
-                iconColor: AppColors.info,
+                iconColor: AppColors.primary,
                 onTap: () => Get.toNamed(AppRoutes.stockMovements),
               ),
             ),

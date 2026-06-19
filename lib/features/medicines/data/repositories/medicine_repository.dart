@@ -14,6 +14,8 @@ class MedicineQuery {
     this.supplierId,
     this.lowStockOnly = false,
     this.expiredFilter = MedicineExpiredFilter.all,
+    this.sortBy = 'createdAt',
+    this.sortOrder = 'desc',
   });
 
   final int page;
@@ -23,6 +25,12 @@ class MedicineQuery {
   final String? supplierId;
   final bool lowStockOnly;
   final MedicineExpiredFilter expiredFilter;
+
+  /// One of: name, code, createdAt, currentStock, expiredDate.
+  final String sortBy;
+
+  /// 'asc' or 'desc'.
+  final String sortOrder;
 }
 
 abstract class MedicineRepository {

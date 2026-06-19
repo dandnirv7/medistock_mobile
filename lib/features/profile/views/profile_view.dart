@@ -32,14 +32,8 @@ class _Body extends StatelessWidget {
       children: [
         Obx(() => _ProfileHeader(user: session.userRx.value)),
         const SizedBox(height: 24),
-        _SectionTile(
-          icon: AppIcons.accountCircleOutlined,
-          title: 'Informasi Akun',
-          subtitle: 'Lihat dan kelola informasi akun Anda',
-          onTap: () {
-            SnackbarHelper.info('Detail informasi akun akan tersedia di rilis berikutnya.');
-          },
-        ),
+        Obx(() => _AccountInfoCard(user: session.userRx.value)),
+        const SizedBox(height: 16),
         _SectionTile(
           icon: AppIcons.settings_outlined,
           title: 'Pengaturan Aplikasi',
@@ -163,6 +157,105 @@ class _ProfileHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AccountInfoCard extends StatelessWidget {
+  const _AccountInfoCard({required this.user});
+
+  final UserModel? user;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 14, 14, 4),
+            child: Text(
+              'Informasi Akun',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          _InfoRow(
+            icon: AppIcons.person_outline,
+            label: 'Nama',
+            value: user?.name.isNotEmpty == true ? user!.name : '-',
+          ),
+          _InfoRow(
+            icon: AppIcons.accountCircleOutlined,
+            label: 'Username',
+            value: user?.username.isNotEmpty == true ? user!.username : '-',
+          ),
+          _InfoRow(
+            icon: AppIcons.email,
+            label: 'Email',
+            value: user?.email?.isNotEmpty == true ? user!.email! : '-',
+          ),
+          _InfoRow(
+            icon: AppIcons.verified_outlined,
+            label: 'Peran',
+            value: user?.userRole.label ?? '-',
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 90,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

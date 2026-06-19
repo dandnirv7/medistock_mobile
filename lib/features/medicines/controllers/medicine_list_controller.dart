@@ -35,6 +35,24 @@ class MedicineListController extends GetxController
   final Rx<MedicineExpiredFilter> expiredFilter =
       Rx<MedicineExpiredFilter>(MedicineExpiredFilter.all);
 
+  /// Sort key + direction. Mirrors the API's accepted values.
+  final RxString sortBy = 'createdAt'.obs;
+  final RxString sortOrder = 'desc'.obs;
+
+  // Debounces search-term changes so we issue one request after the user
+  // pauses typing instead of one per keystroke.
+  Worker? _searchDebounce;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _searchDebounce = debounce<String>(
+      search,
+      (_) => load(),
+      time: const Duration(milliseconds: 350),
+    );
+  }
+
   @override
   void onReady() {
     super.onReady();
@@ -55,6 +73,8 @@ class MedicineListController extends GetxController
         if (token != _loadToken || cancelToken.isCancelled) {
           return <MedicineModel>[];
         }
+        total.value = result.total;
+        totalPages.value = result.totalPages;
         return result.items;
       } on DioException catch (e) {
         // Cancelled in-flight requests are expected when the user changes
@@ -120,6 +140,8 @@ class MedicineListController extends GetxController
         supplierId: supplierFilter.value,
         lowStockOnly: lowStockOnly.value,
         expiredFilter: expiredFilter.value,
+        sortBy: sortBy.value,
+        sortOrder: sortOrder.value,
       ),
       cancelToken: cancelToken,
     );
@@ -134,8 +156,9 @@ class MedicineListController extends GetxController
   }
 
   Future<void> setSearch(String value) async {
+    // Just record the term; the debounce worker triggers the actual load
+    // once typing settles, avoiding a request per keystroke.
     search.value = value;
-    await load();
   }
 
   Future<void> setCategoryFilter(String? id) async {
@@ -158,6 +181,13 @@ class MedicineListController extends GetxController
     await load();
   }
 
+  /// Apply a new sort key + direction and reload.
+  Future<void> setSort(String by, String order) async {
+    sortBy.value = by;
+    sortOrder.value = order;
+    await load();
+  }
+
   Future<void> resetFilters() async {
     search.value = '';
     categoryFilter.value = null;
@@ -177,6 +207,7 @@ class MedicineListController extends GetxController
     // Cancel any in-flight medicines request so its callbacks cannot
     // mutate state after the controller is disposed (e.g. when leaving the
     // medicine list while a query is still pending).
+    _searchDebounce?.dispose();
     _apiClient.cancelActiveMedicinesRequest();
     _activeToken = null;
     super.onClose();

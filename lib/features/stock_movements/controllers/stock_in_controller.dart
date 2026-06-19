@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import '../../../core/utils/date_formatter.dart';
 import '../../medicines/data/repositories/medicine_repository.dart';
 import '../../medicines/models/medicine_model.dart';
 import '../../suppliers/data/repositories/supplier_repository.dart';
@@ -84,11 +85,7 @@ class StockInController extends GetxController {
     dateCtrl.text = _formatDate(d);
   }
 
-  String _formatDate(DateTime d) {
-    final mm = d.month.toString().padLeft(2, '0');
-    final dd = d.day.toString().padLeft(2, '0');
-    return '${d.year}-$mm-$dd';
-  }
+  String _formatDate(DateTime d) => DateFormatter.toDisplayId(d);
 
   String? requiredText(String? v, String label) {
     if (v == null || v.trim().isEmpty) return '$label wajib diisi';

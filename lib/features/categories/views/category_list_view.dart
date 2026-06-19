@@ -86,20 +86,31 @@ class _CategoryList extends StatelessWidget {
       separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, i) {
         final c = items[i];
-        return _CategoryTile(
-          category: c,
-          onTap: () => Get.toNamed(
-            AppRoutes.categoryForm,
-            arguments: c,
+        return Dismissible(
+          key: ValueKey('category-${c.id}'),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: AppColors.danger.withValues(alpha: 0.1),
+              borderRadius: AppRadii.border(AppRadii.md),
+            ),
+            child: const Icon(AppIcons.delete, color: AppColors.danger),
           ),
-          onDelete: () async {
-            final ok = await ConfirmDialog.show(
-              context,
-              title: 'Hapus kategori?',
-              message: '${c.name} akan dinonaktifkan.',
-            );
-            if (ok) await controller.delete(c);
-          },
+          confirmDismiss: (_) => ConfirmDialog.show(
+            context,
+            title: 'Hapus kategori?',
+            message: '${c.name} akan dinonaktifkan.',
+          ),
+          onDismissed: (_) => controller.delete(c),
+          child: _CategoryTile(
+            category: c,
+            onTap: () => Get.toNamed(
+              AppRoutes.categoryForm,
+              arguments: c,
+            ),
+          ),
         );
       },
     );
@@ -110,67 +121,64 @@ class _CategoryTile extends StatelessWidget {
   const _CategoryTile({
     required this.category,
     required this.onTap,
-    required this.onDelete,
   });
 
   final CategoryModel category;
   final VoidCallback onTap;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadii.border(AppRadii.md),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: AppRadii.border(AppRadii.sm),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadii.border(AppRadii.md),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadii.border(AppRadii.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: AppRadii.border(AppRadii.sm),
+              ),
+              child: const Icon(
+                AppIcons.categoryOutlined,
+                color: AppColors.primary,
+              ),
             ),
-            child: const Icon(
-              AppIcons.categoryOutlined,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  category.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                if (category.description != null &&
-                    category.description!.isNotEmpty)
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    category.description!,
+                    category.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${category.medicineCount} obat',
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-              ],
+                ],
+              ),
             ),
-          ),
-          IconButton(
-            tooltip: 'Hapus',
-            onPressed: onDelete,
-            icon: const Icon(AppIcons.delete, color: AppColors.danger),
-          ),
-          const Icon(AppIcons.chevronRight, color: AppColors.textSecondary),
-        ],
+            const Icon(AppIcons.chevronRight, color: AppColors.textSecondary),
+          ],
+        ),
       ),
     );
   }

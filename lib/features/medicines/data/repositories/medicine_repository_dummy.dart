@@ -50,6 +50,31 @@ class MedicineRepositoryDummy implements MedicineRepository {
       case MedicineExpiredFilter.all:
         break;
     }
+
+    int cmp(MedicineModel a, MedicineModel b) {
+      switch (q.sortBy) {
+        case 'name':
+          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        case 'code':
+          return a.code.toLowerCase().compareTo(b.code.toLowerCase());
+        case 'currentStock':
+          return a.currentStock.compareTo(b.currentStock);
+        case 'expiredDate':
+          final ad = a.expiredDate;
+          final bd = b.expiredDate;
+          if (ad == null && bd == null) return 0;
+          if (ad == null) return 1;
+          if (bd == null) return -1;
+          return ad.compareTo(bd);
+        case 'createdAt':
+        default:
+          final ad = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          final bd = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          return ad.compareTo(bd);
+      }
+    }
+
+    items.sort((a, b) => q.sortOrder == 'asc' ? cmp(a, b) : -cmp(a, b));
     return items;
   }
 

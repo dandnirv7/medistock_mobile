@@ -18,6 +18,8 @@ class MedicineRepositoryApi implements MedicineRepository {
       if (q.categoryId != null) 'categoryId': q.categoryId,
       if (q.supplierId != null) 'supplierId': q.supplierId,
       if (q.lowStockOnly) 'lowStock': 'true',
+      'sortBy': q.sortBy,
+      'sortOrder': q.sortOrder,
       if (q.expiredFilter != MedicineExpiredFilter.all)
         'expiredStatus': switch (q.expiredFilter) {
           MedicineExpiredFilter.soon => 'soon',

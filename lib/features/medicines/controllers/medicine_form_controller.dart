@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../../core/storage/auth_session.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../categories/data/repositories/category_repository.dart';
 import '../../categories/models/category_model.dart';
 import '../../suppliers/data/repositories/supplier_repository.dart';
@@ -17,13 +18,33 @@ class MedicineFormController extends GetxController {
   final formKey = GlobalKey<FormState>();
   final codeCtrl = TextEditingController();
   final nameCtrl = TextEditingController();
-  final unitCtrl = TextEditingController(text: 'Tablet');
   final purchasePriceCtrl = TextEditingController(text: '0');
   final sellingPriceCtrl = TextEditingController(text: '0');
   final currentStockCtrl = TextEditingController(text: '0');
   final minimumStockCtrl = TextEditingController(text: '0');
   final expiredDateCtrl = TextEditingController();
   final descriptionCtrl = TextEditingController();
+
+  /// Common pharmacy units offered in the Satuan dropdown. If an edited
+  /// medicine carries a unit outside this set, it is prepended in [onInit]
+  /// so the dropdown still has a matching value.
+  static const List<String> defaultUnits = [
+    'Tablet',
+    'Kaplet',
+    'Kapsul',
+    'Botol',
+    'Sirup',
+    'Strip',
+    'Tube',
+    'Ampul',
+    'Vial',
+    'Sachet',
+    'Pcs',
+    'Box',
+  ];
+
+  final RxList<String> unitOptions = <String>[...defaultUnits].obs;
+  final RxString unit = 'Tablet'.obs;
 
   final RxList<CategoryModel> categories = <CategoryModel>[].obs;
   final RxList<SupplierModel> suppliers = <SupplierModel>[].obs;
@@ -43,7 +64,10 @@ class MedicineFormController extends GetxController {
       editing = args;
       codeCtrl.text = args.code;
       nameCtrl.text = args.name;
-      unitCtrl.text = args.unit;
+      if (args.unit.isNotEmpty && !unitOptions.contains(args.unit)) {
+        unitOptions.insert(0, args.unit);
+      }
+      if (args.unit.isNotEmpty) unit.value = args.unit;
       purchasePriceCtrl.text = args.purchasePrice.toStringAsFixed(0);
       sellingPriceCtrl.text = args.sellingPrice.toStringAsFixed(0);
       currentStockCtrl.text = args.currentStock.toString();
@@ -62,7 +86,6 @@ class MedicineFormController extends GetxController {
   void onClose() {
     codeCtrl.dispose();
     nameCtrl.dispose();
-    unitCtrl.dispose();
     purchasePriceCtrl.dispose();
     sellingPriceCtrl.dispose();
     currentStockCtrl.dispose();
@@ -92,9 +115,7 @@ class MedicineFormController extends GetxController {
 
   String _formatDate(DateTime? d) {
     if (d == null) return '';
-    final mm = d.month.toString().padLeft(2, '0');
-    final dd = d.day.toString().padLeft(2, '0');
-    return '${d.year}-$mm-$dd';
+    return DateFormatter.toDisplayShort(d);
   }
 
   String? requiredText(String? v, String label) {
@@ -133,7 +154,7 @@ class MedicineFormController extends GetxController {
           name: nameCtrl.text.trim(),
           categoryId: categoryId.value,
           supplierId: supplierId.value,
-          unit: unitCtrl.text.trim(),
+          unit: unit.value,
           purchasePrice:
               double.parse(purchasePriceCtrl.text.replaceAll(',', '.')),
           sellingPrice:
@@ -152,7 +173,7 @@ class MedicineFormController extends GetxController {
           name: nameCtrl.text.trim(),
           categoryId: categoryId.value,
           supplierId: supplierId.value,
-          unit: unitCtrl.text.trim(),
+          unit: unit.value,
           purchasePrice:
               double.parse(purchasePriceCtrl.text.replaceAll(',', '.')),
           sellingPrice:

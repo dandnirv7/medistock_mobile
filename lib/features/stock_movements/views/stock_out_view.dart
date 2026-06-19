@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/haptics.dart';
 import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/widgets/app_date_picker.dart';
 import '../../medicines/models/medicine_model.dart';
 import '../controllers/stock_out_controller.dart';
 import '../models/stock_movement_model.dart';
@@ -198,15 +199,17 @@ class _DateField extends StatelessWidget {
       controller: c.dateCtrl,
       readOnly: true,
       onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
+        final picked = await AppDatePicker.show(
+          context,
           initialDate: c.transactionDate,
-          firstDate: DateTime(2000),
-          lastDate: DateTime(2100),
+          title: 'Tanggal Transaksi',
         );
         if (picked != null) c.setDate(picked);
       },
-      decoration: const InputDecoration(labelText: 'Tanggal Transaksi'),
+      decoration: const InputDecoration(
+        labelText: 'Tanggal Transaksi',
+        suffixIcon: Icon(AppIcons.calendar_today_outlined),
+      ),
     );
   }
 }
@@ -232,7 +235,7 @@ class _SummaryCard extends StatelessWidget {
       final med = c.selectedMedicine;
       return ValueListenableBuilder<TextEditingValue>(
         valueListenable: c.quantityCtrl,
-        builder: (context, _, __) {
+        builder: (context, _, _) {
           final qty = int.tryParse(c.quantityCtrl.text) ?? 0;
           final stockAfter =
               med == null ? 0 : (med.currentStock - qty).clamp(0, 1 << 30);
@@ -327,17 +330,20 @@ class _StockInfoTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.secondaryLight,
+        color: AppColors.primaryLight,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          const Icon(AppIcons.info_outline, color: AppColors.secondary),
+          const Icon(AppIcons.boxes, color: AppColors.primary),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'Stok Tersedia: ${medicine.currentStock} ${medicine.unit}',
-              style: const TextStyle(color: AppColors.textPrimary),
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
