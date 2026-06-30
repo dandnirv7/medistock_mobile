@@ -10,8 +10,10 @@ class AppRoutes {
   static const String medicineDetail = '/medicines/detail';
   static const String categories = '/categories';
   static const String categoryForm = '/categories/form';
+  static const String categoryDetail = '/categories/detail';
   static const String suppliers = '/suppliers';
   static const String supplierForm = '/suppliers/form';
+  static const String supplierDetail = '/suppliers/detail';
   static const String stockIn = '/stock-in';
   static const String stockOut = '/stock-out';
   static const String stockMovements = '/stock-movements';

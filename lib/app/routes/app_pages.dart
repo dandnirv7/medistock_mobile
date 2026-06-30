@@ -6,6 +6,7 @@ import '../../features/auth/bindings/auth_binding.dart';
 import '../../features/auth/views/login_view.dart';
 import '../../features/categories/bindings/category_binding.dart';
 import '../../features/categories/views/category_form_view.dart';
+import '../../features/categories/views/category_detail_view.dart';
 import '../../features/categories/views/category_list_view.dart';
 import '../../features/dashboard/bindings/dashboard_binding.dart';
 import '../../features/dashboard/views/dashboard_view.dart';
@@ -26,6 +27,7 @@ import '../../features/stock_movements/views/stock_level_view.dart';
 import '../../features/stock_movements/views/stock_out_view.dart';
 import '../../features/suppliers/bindings/supplier_binding.dart';
 import '../../features/suppliers/views/supplier_form_view.dart';
+import '../../features/suppliers/views/supplier_detail_view.dart';
 import '../../features/suppliers/views/supplier_list_view.dart';
 import '../bindings/auth_middleware.dart';
 import '../bindings/role_guard.dart';
@@ -88,6 +90,12 @@ class AppPages {
       middlewares: [AuthMiddleware(), RoleGuard.requireAdmin],
     ),
     GetPage(
+      name: AppRoutes.categoryDetail,
+      page: () => const CategoryDetailView(),
+      binding: CategoryBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
       name: AppRoutes.suppliers,
       page: () => const SupplierListView(),
       binding: SupplierBinding(),
@@ -98,6 +106,12 @@ class AppPages {
       page: () => const SupplierFormView(),
       binding: SupplierBinding(),
       middlewares: [AuthMiddleware(), RoleGuard.requireAdmin],
+    ),
+    GetPage(
+      name: AppRoutes.supplierDetail,
+      page: () => const SupplierDetailView(),
+      binding: SupplierBinding(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: AppRoutes.stockIn,
