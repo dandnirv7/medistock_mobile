@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import '../../../core/constants/medicine_units.dart';
 import '../../../core/storage/auth_session.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../categories/data/repositories/category_repository.dart';
@@ -25,25 +26,11 @@ class MedicineFormController extends GetxController {
   final expiredDateCtrl = TextEditingController();
   final descriptionCtrl = TextEditingController();
 
-  /// Common pharmacy units offered in the Satuan dropdown. If an edited
-  /// medicine carries a unit outside this set, it is prepended in [onInit]
-  /// so the dropdown still has a matching value.
-  static const List<String> defaultUnits = [
-    'Tablet',
-    'Kaplet',
-    'Kapsul',
-    'Botol',
-    'Sirup',
-    'Strip',
-    'Tube',
-    'Ampul',
-    'Vial',
-    'Sachet',
-    'Pcs',
-    'Box',
-  ];
+  /// Common pharmacy units offered in the Satuan dropdown. Defined in
+  /// [MedicineUnits] for reuse across the app.
+  static const List<String> defaultUnits = MedicineUnits.all;
 
-  final RxList<String> unitOptions = <String>[...defaultUnits].obs;
+  final RxList<String> unitOptions = <String>[...MedicineUnits.all].obs;
   final RxString unit = 'Tablet'.obs;
 
   final RxList<CategoryModel> categories = <CategoryModel>[].obs;

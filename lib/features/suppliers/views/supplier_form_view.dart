@@ -12,11 +12,11 @@ class SupplierFormView extends GetView<SupplierFormController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Obx(() => Text(
-              controller.editing == null
-                  ? 'Form Supplier'
-                  : 'Edit Supplier',
-            )),
+        title: Text(
+          controller.editing == null
+              ? 'Form Supplier'
+              : 'Edit Supplier',
+        ),
       ),
       body: Obx(() {
         return Form(

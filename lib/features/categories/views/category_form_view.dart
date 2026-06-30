@@ -11,11 +11,11 @@ class CategoryFormView extends GetView<CategoryFormController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Obx(() => Text(
-              controller.editing == null
-                  ? 'Tambah Kategori'
-                  : 'Edit Kategori',
-            )),
+        title: Text(
+          controller.editing == null
+              ? 'Tambah Kategori'
+              : 'Edit Kategori',
+        ),
       ),
       body: Obx(() {
         return Form(
