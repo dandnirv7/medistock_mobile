@@ -17,6 +17,8 @@ class SupplierListController extends GetxController
   final RxInt totalPages = 1.obs;
   final RxBool isLoadingMore = false.obs;
   final RxString search = ''.obs;
+  final RxString sortBy = 'name'.obs;
+  final RxString sortOrder = 'asc'.obs;
 
   @override
   void onReady() {
@@ -28,6 +30,12 @@ class SupplierListController extends GetxController
   Future<void> load() async {
     page.value = 1;
     await runLoad(_fetchItems);
+  }
+
+  void setSort(String field, String order) {
+    sortBy.value = field;
+    sortOrder.value = order;
+    load();
   }
 
   Future<void> fetch({bool reset = true}) async {
@@ -61,6 +69,8 @@ class SupplierListController extends GetxController
           page: page.value,
           limit: limit,
           search: search.value.trim().isEmpty ? null : search.value.trim(),
+          sortBy: sortBy.value,
+          sortOrder: sortOrder.value,
         ),
       );
 

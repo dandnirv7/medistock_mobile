@@ -18,6 +18,25 @@ class CategoryRepositoryDummy implements CategoryRepository {
               (c.description?.toLowerCase().contains(s) ?? false))
           .toList();
     }
+    // Apply sorting
+    final sortBy = q.sortBy ?? 'name';
+    final sortOrder = q.sortOrder ?? 'asc';
+    items.sort((a, b) {
+      int cmp;
+      switch (sortBy) {
+        case 'createdAt':
+          cmp = (a.createdAt ?? DateTime(2000))
+              .compareTo(b.createdAt ?? DateTime(2000));
+          break;
+        case 'medicineCount':
+          cmp = a.medicineCount.compareTo(b.medicineCount);
+          break;
+        default: // name
+          cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          break;
+      }
+      return sortOrder == 'desc' ? -cmp : cmp;
+    });
     return items;
   }
 
