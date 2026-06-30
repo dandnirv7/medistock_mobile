@@ -242,6 +242,7 @@ class _TypeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return Wrap(
       spacing: 8,
+      runSpacing: 8,
       children: [
         _Chip(
           label: 'Semua',

@@ -169,24 +169,28 @@ class _SupplierDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Get.find<StockInController>();
-    return DropdownButtonFormField<String?>(
-      initialValue: c.supplierId.value,
-      isExpanded: true,
-      items: [
-        const DropdownMenuItem<String?>(
-          value: null,
-          child: Text('Tanpa supplier'),
-        ),
-        ...c.suppliers.map(
-          (SupplierModel s) => DropdownMenuItem<String?>(
-            value: s.id,
-            child: Text(s.name, overflow: TextOverflow.ellipsis),
+    return Obx(() {
+      final selectedId = c.supplierId.value;
+      return DropdownButtonFormField<String?>(
+        key: ValueKey('supplier_$selectedId'),
+        initialValue: selectedId,
+        isExpanded: true,
+        items: [
+          const DropdownMenuItem<String?>(
+            value: null,
+            child: Text('Tanpa supplier'),
           ),
-        ),
-      ],
-      onChanged: c.setSupplier,
-      decoration: const InputDecoration(labelText: 'Supplier'),
-    );
+          ...c.suppliers.map(
+            (SupplierModel s) => DropdownMenuItem<String?>(
+              value: s.id,
+              child: Text(s.name, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+        ],
+        onChanged: c.setSupplier,
+        decoration: const InputDecoration(labelText: 'Supplier (opsional)'),
+      );
+    });
   }
 }
 

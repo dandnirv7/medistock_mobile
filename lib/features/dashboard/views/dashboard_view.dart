@@ -170,7 +170,7 @@ class DashboardView extends GetView<DashboardController> {
               const SizedBox(height: AppSpacing.md),
               _AlertCard(
                 title: 'Hampir Expired',
-                icon: AppIcons.expiringSoon,
+                icon: AppIcons.calendar,
                 accent: AppColors.expiredSoon,
                 count: summary.expiredSoonCount,
                 subtitle: summary.expiredSoonCount == 0
@@ -292,16 +292,17 @@ class _StatGrid extends StatelessWidget {
           unit: 'Jenis',
         ),
         DashboardStatCard(
-          label: 'Stok Rendah',
-          value: summary.lowStockCount,
-          icon: AppIcons.lowStock,
-          accent: AppColors.stockLow,
-          unit: 'Obat',
+          label: 'Kategori',
+          value: summary.totalCategories,
+          icon: AppIcons.categories,
+          accent: AppColors.primary,
+          unit: 'Kategori',
+          onTap: () => Get.toNamed(AppRoutes.categories),
         ),
         DashboardStatCard(
           label: 'Hampir Expired',
           value: summary.expiredSoonCount,
-          icon: AppIcons.expiringSoon,
+          icon: AppIcons.calendar,
           accent: AppColors.expired,
           unit: 'Obat',
         ),

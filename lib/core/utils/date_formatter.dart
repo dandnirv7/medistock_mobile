@@ -4,39 +4,42 @@ class DateFormatter {
   DateFormatter._();
 
   static final DateFormat _api = DateFormat('yyyy-MM-dd');
-  static final DateFormat _display = DateFormat('dd MMM yyyy');
-  static final DateFormat _displayShort = DateFormat('dd/MM/yyyy');
-  static final DateFormat _displayWithTime = DateFormat('dd MMM yyyy HH:mm');
 
-  /// Indonesian month names. Used by [toDisplayId] so dates render as
+  /// Indonesian month names (full). Used so dates render as
   /// "10 Mei 2025" without needing `intl` locale data initialization.
   static const List<String> _idMonths = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
     'Mei',
-    'Jun',
-    'Jul',
-    'Agu',
-    'Sep',
-    'Okt',
-    'Nov',
-    'Des',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
   ];
 
   static String toApi(DateTime date) => _api.format(date);
 
-  static String toDisplay(DateTime date) => _display.format(date);
+  /// Indonesian full month, e.g. "6 Juli 2026".
+  static String toDisplay(DateTime date) =>
+      '${date.day} ${_idMonths[date.month - 1]} ${date.year}';
 
-  /// Indonesian display format, e.g. "10 Mei 2025".
+  /// Indonesian full month, e.g. "6 Juli 2026".
   static String toDisplayId(DateTime date) =>
       '${date.day} ${_idMonths[date.month - 1]} ${date.year}';
 
-  static String toDisplayShort(DateTime date) => _displayShort.format(date);
+  /// Short Indonesian full month, same as [toDisplay].
+  static String toDisplayShort(DateTime date) =>
+      '${date.day} ${_idMonths[date.month - 1]} ${date.year}';
 
+  /// Indonesian full month with time, e.g. "6 Juli 2026 14:30".
   static String toDisplayWithTime(DateTime date) =>
-      _displayWithTime.format(date);
+      '${date.day} ${_idMonths[date.month - 1]} ${date.year} '
+      '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
 
   static DateTime? tryParse(String? value) {
     if (value == null || value.isEmpty) return null;
