@@ -16,14 +16,13 @@ void main() {
               value: 42,
               icon: AppIcons.medicines,
               accent: AppColors.primary,
+              duration: Duration.zero,
             ),
           ),
         ),
       );
       await tester.pump();
       expect(find.text('Total Obat'), findsOneWidget);
-      // Initial value should be the target.
-      await tester.pump(const Duration(milliseconds: 800));
       expect(find.text('42'), findsOneWidget);
     });
 
@@ -54,12 +53,12 @@ void main() {
               value: 10,
               icon: AppIcons.stockMovements,
               accent: AppColors.info,
+              duration: Duration.zero,
             ),
           ),
         ),
       );
-      // Pump the full animation duration plus a frame to settle.
-      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pump();
       expect(find.text('10'), findsOneWidget);
     });
 
@@ -77,19 +76,17 @@ void main() {
                   value: value,
                   icon: AppIcons.dashboard,
                   accent: AppColors.primary,
+                  duration: Duration.zero,
                 );
               },
             ),
           ),
         ),
       );
-      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pump();
       expect(find.text('1'), findsOneWidget);
       outerSet(() => value = 25);
-      // Pump one frame so the new TweenAnimationBuilder is built, then
-      // advance the full animation duration.
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 700));
       expect(find.text('25'), findsOneWidget);
     });
 

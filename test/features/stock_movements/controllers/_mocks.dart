@@ -186,6 +186,8 @@ class StubStockMovementRepository implements StockMovementRepository {
     String? supplierId,
     DateTime? transactionDate,
     String? notes,
+    String? batchNumber,
+    DateTime? expiredDate,
   }) async {
     stockInCalls += 1;
     if (throwOnStockIn) {

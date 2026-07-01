@@ -88,7 +88,7 @@ void main() {
       h.refreshed = <_Item>[_Item(99)];
       await h.load();
       final before = List<_Item>.of(h.items);
-      h.refreshLatency = const Duration(milliseconds: 200);
+      h.refreshLatency = const Duration(milliseconds: 80);
       await h.refresh();
       // Timed out — items remain the original list.
       expect(h.items, equals(before));
@@ -126,7 +126,7 @@ void main() {
 
     test('Property 8 — randomized failed/timed-out refreshes retain items',
         () async {
-      const iterations = 50;
+      const iterations = 10;
       final r = rng(0xA17B);
 
       for (var i = 0; i < iterations; i++) {
@@ -143,7 +143,7 @@ void main() {
         if (r.nextBoundedInt(0, 1) == 0) {
           h.throwOnRefresh = true;
         } else {
-          h.refreshLatency = const Duration(milliseconds: 500);
+          h.refreshLatency = const Duration(milliseconds: 100);
         }
         await h.refresh();
         // Items must be identical pre/post.

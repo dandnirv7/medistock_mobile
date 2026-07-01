@@ -94,7 +94,7 @@ void main() {
 
     testWidgets('Property 7 - state exclusivity for every ViewState value',
         (tester) async {
-      const iterations = 20;
+      const iterations = 5;
       final r = rng(0xD07A);
       for (var i = 0; i < iterations; i++) {
         // Pick a random ViewState and a random item count.

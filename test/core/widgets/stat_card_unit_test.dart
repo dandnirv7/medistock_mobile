@@ -17,12 +17,12 @@ void main() {
               icon: AppIcons.medicines,
               accent: AppColors.primary,
               unit: 'Jenis',
+              duration: Duration.zero,
             ),
           ),
         ),
       );
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 800));
       expect(find.text('1248'), findsOneWidget);
       expect(find.text('Jenis'), findsOneWidget);
       expect(find.text('Total Obat'), findsOneWidget);
@@ -37,12 +37,12 @@ void main() {
               value: 5,
               icon: AppIcons.lowStock,
               accent: AppColors.warning,
+              duration: Duration.zero,
             ),
           ),
         ),
       );
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 800));
       expect(find.text('5'), findsOneWidget);
       // No unit should be rendered — there is no way for the empty/null
       // value to render as anything other than the value itself.
@@ -61,12 +61,12 @@ void main() {
               icon: AppIcons.suppliers,
               accent: AppColors.info,
               unit: '',
+              duration: Duration.zero,
             ),
           ),
         ),
       );
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 800));
       expect(find.text('3'), findsOneWidget);
     });
   });

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../../core/storage/auth_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/data_async_view.dart';
@@ -25,16 +26,24 @@ class CategoryListView extends StatelessWidget {
         scrolledUnderElevation: 0,
         title: const Text('Kategori'),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        onPressed: () => _openForm(context),
-        child: const Icon(LucideIcons.plus),
+      floatingActionButton: Obx(
+        () => Get.find<AuthSession>().isAdmin
+            ? FloatingActionButton(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                onPressed: () => _openForm(context),
+                child: const Icon(LucideIcons.plus),
+              )
+            : const SizedBox.shrink(),
       ),
       body: DataAsyncView<CategoryModel>(
         state: ctrl.state,
         items: ctrl.items,
         onRetry: ctrl.load,
+        errorMessage: ctrl.errorMessage,
+        emptyTitle: 'Belum ada kategori',
+        emptyActionLabel: 'Tambah Kategori',
+        onEmptyAction: () => _openForm(context),
         builder: (context, items) => _CategoryBody(
           items: items,
           ctrl: ctrl,
@@ -84,7 +93,11 @@ class _CategoryBody extends StatelessWidget {
                   child: _CategoryTile(category: cat),
                 )),
               const SizedBox(height: 16),
-              _BottomAddCard(onTap: onCreate),
+              Obx(
+                () => Get.find<AuthSession>().isAdmin
+                    ? _BottomAddCard(onTap: onCreate)
+                    : const SizedBox.shrink(),
+              ),
             ]),
           ),
         ),

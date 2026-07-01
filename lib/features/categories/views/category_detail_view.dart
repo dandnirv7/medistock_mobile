@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../../core/storage/auth_session.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -31,42 +32,46 @@ class CategoryDetailView extends StatelessWidget {
         scrolledUnderElevation: 0,
         title: const Text('Detail Kategori'),
         actions: [
-          PopupMenuButton<String>(
-            icon: Icon(LucideIcons.moreVertical, color: AppColors.textPrimary),
-            color: AppColors.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-              side: BorderSide(color: AppColors.border),
-            ),
-            onSelected: (value) {
-              if (value == 'edit') {
-                Get.toNamed(AppRoutes.categoryForm, arguments: category);
-              } else if (value == 'delete') {
-                _confirmDelete(context, category, ctrl);
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(AppIcons.edit, size: 18, color: AppColors.primary),
-                    const SizedBox(width: 10),
-                    Text('Edit', style: AppTextStyles.body),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(AppIcons.delete, size: 18, color: AppColors.danger),
-                    const SizedBox(width: 10),
-                    Text('Hapus', style: AppTextStyles.body.copyWith(color: AppColors.danger)),
-                  ],
-                ),
-              ),
-            ],
+          Obx(
+            () => Get.find<AuthSession>().isAdmin
+                ? PopupMenuButton<String>(
+                    icon: Icon(LucideIcons.moreVertical, color: AppColors.textPrimary),
+                    color: AppColors.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: BorderSide(color: AppColors.border),
+                    ),
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        Get.toNamed(AppRoutes.categoryForm, arguments: category);
+                      } else if (value == 'delete') {
+                        _confirmDelete(context, category, ctrl);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(AppIcons.edit, size: 18, color: AppColors.primary),
+                            const SizedBox(width: 10),
+                            Text('Edit', style: AppTextStyles.body),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(AppIcons.delete, size: 18, color: AppColors.danger),
+                            const SizedBox(width: 10),
+                            Text('Hapus', style: AppTextStyles.body.copyWith(color: AppColors.danger)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                : const SizedBox.shrink(),
           ),
         ],
       ),
