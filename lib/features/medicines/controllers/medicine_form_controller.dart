@@ -100,6 +100,29 @@ class MedicineFormController extends GetxController {
     expiredDateCtrl.text = _formatDate(date);
   }
 
+  /// Auto-fills all form fields from a scanned [MedicineModel] (Req 5.3, 5.4).
+  void autoFillFromMedicine(MedicineModel medicine) {
+    codeCtrl.text = medicine.code;
+    nameCtrl.text = medicine.name;
+    purchasePriceCtrl.text = medicine.purchasePrice.toStringAsFixed(0);
+    sellingPriceCtrl.text = medicine.sellingPrice.toStringAsFixed(0);
+    minimumStockCtrl.text = medicine.minimumStock.toString();
+
+    if (medicine.unit.isNotEmpty && !unitOptions.contains(medicine.unit)) {
+      unitOptions.insert(0, medicine.unit);
+    }
+    if (medicine.unit.isNotEmpty) unit.value = medicine.unit;
+
+    if (medicine.categoryId != null) categoryId.value = medicine.categoryId;
+    if (medicine.supplierId != null) supplierId.value = medicine.supplierId;
+
+    if (medicine.expiredDate != null) {
+      expiredDate = medicine.expiredDate;
+      expiredDateCtrl.text = _formatDate(medicine.expiredDate);
+    }
+    descriptionCtrl.text = medicine.description ?? '';
+  }
+
   String _formatDate(DateTime? d) {
     if (d == null) return '';
     return DateFormatter.toDisplayShort(d);

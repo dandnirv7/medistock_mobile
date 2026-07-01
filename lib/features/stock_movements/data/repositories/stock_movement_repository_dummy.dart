@@ -83,6 +83,8 @@ class StockMovementRepositoryDummy implements StockMovementRepository {
     String? supplierId,
     DateTime? transactionDate,
     String? notes,
+    String? batchNumber,
+    DateTime? expiredDate,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
     if (quantity <= 0) {

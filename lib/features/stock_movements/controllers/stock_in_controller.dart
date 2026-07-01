@@ -17,6 +17,8 @@ class StockInController extends GetxController {
   final quantityCtrl = TextEditingController(text: '0');
   final notesCtrl = TextEditingController();
   final dateCtrl = TextEditingController();
+  final batchNumberCtrl = TextEditingController();
+  final expiredDateCtrl = TextEditingController();
   final RxnString medicineId = RxnString();
   final RxnString supplierId = RxnString();
   final RxList<MedicineModel> medicines = <MedicineModel>[].obs;
@@ -24,6 +26,7 @@ class StockInController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxnString errorMessage = RxnString();
   DateTime transactionDate = DateTime.now();
+  DateTime? expiredDate;
   MedicineModel? selectedMedicine;
 
   @override
@@ -39,6 +42,8 @@ class StockInController extends GetxController {
     quantityCtrl.dispose();
     notesCtrl.dispose();
     dateCtrl.dispose();
+    batchNumberCtrl.dispose();
+    expiredDateCtrl.dispose();
     super.onClose();
   }
 
@@ -85,6 +90,11 @@ class StockInController extends GetxController {
     dateCtrl.text = _formatDate(d);
   }
 
+  void setExpiredDate(DateTime d) {
+    expiredDate = d;
+    expiredDateCtrl.text = _formatDate(d);
+  }
+
   String _formatDate(DateTime d) => DateFormatter.toDisplayId(d);
 
   String? requiredText(String? v, String label) {
@@ -106,6 +116,10 @@ class StockInController extends GetxController {
       errorMessage.value = 'Pilih obat terlebih dahulu';
       return false;
     }
+    if (batchNumberCtrl.text.trim().isEmpty) {
+      errorMessage.value = 'Nomor batch wajib diisi';
+      return false;
+    }
     if (!(formKey.currentState?.validate() ?? false)) return false;
     isLoading.value = true;
     errorMessage.value = null;
@@ -116,6 +130,8 @@ class StockInController extends GetxController {
         supplierId: supplierId.value,
         transactionDate: transactionDate,
         notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+        batchNumber: batchNumberCtrl.text.trim(),
+        expiredDate: expiredDate,
       );
       // Successful write — refresh the lookup list so the picker shows
       // the updated stock levels on next open.

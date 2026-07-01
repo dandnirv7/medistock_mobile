@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../controllers/medicine_form_controller.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/widgets/app_date_picker.dart';
+import '../controllers/medicine_form_controller.dart';
+import '../models/medicine_model.dart';
+import 'scan_view.dart';
 
 class MedicineFormView extends GetView<MedicineFormController> {
   const MedicineFormView({super.key});
@@ -52,15 +56,35 @@ class MedicineFormView extends GetView<MedicineFormController> {
                     controller.requiredText(v, 'Nama obat'),
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: controller.codeCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Kode Obat *',
-                  hintText: 'Mis. PAR-500',
-                ),
-                textCapitalization: TextCapitalization.characters,
-                validator: (v) =>
-                    controller.requiredText(v, 'Kode'),
+              // Kode Obat + Scan button row (Req 5.1).
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: controller.codeCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Kode Obat *',
+                        hintText: 'Mis. PAR-500',
+                      ),
+                      textCapitalization: TextCapitalization.characters,
+                      validator: (v) =>
+                          controller.requiredText(v, 'Kode'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: _ScanButton(
+                      onScanned: (medicine) {
+                        controller.autoFillFromMedicine(medicine);
+                        SnackbarHelper.success(
+                          'Form diisi dari barcode: ${medicine.name}',
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               _Dropdown<String>(
@@ -123,10 +147,18 @@ class MedicineFormView extends GetView<MedicineFormController> {
                       decoration: const InputDecoration(
                         labelText: 'Harga Beli',
                       ),
-                      validator: (v) => controller.numberText(
-                        v,
-                        'Harga beli',
-                      ),
+                      validator: FormBuilderValidators.compose([
+                        FormBuilderValidators.required(
+                          errorText: 'Harga beli wajib diisi',
+                        ),
+                        FormBuilderValidators.numeric(
+                          errorText: 'Nilai harus angka positif',
+                        ),
+                        FormBuilderValidators.min(
+                          1,
+                          errorText: 'Nilai harus angka positif',
+                        ),
+                      ]),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -139,10 +171,18 @@ class MedicineFormView extends GetView<MedicineFormController> {
                       decoration: const InputDecoration(
                         labelText: 'Harga Jual',
                       ),
-                      validator: (v) => controller.numberText(
-                        v,
-                        'Harga jual',
-                      ),
+                      validator: FormBuilderValidators.compose([
+                        FormBuilderValidators.required(
+                          errorText: 'Harga jual wajib diisi',
+                        ),
+                        FormBuilderValidators.numeric(
+                          errorText: 'Nilai harus angka positif',
+                        ),
+                        FormBuilderValidators.min(
+                          1,
+                          errorText: 'Nilai harus angka positif',
+                        ),
+                      ]),
                     ),
                   ),
                 ],
@@ -159,11 +199,18 @@ class MedicineFormView extends GetView<MedicineFormController> {
                         decoration: const InputDecoration(
                           labelText: 'Stok Saat Ini',
                         ),
-                        validator: (v) => controller.numberText(
-                          v,
-                          'Stok saat ini',
-                          integer: true,
-                        ),
+                        validator: FormBuilderValidators.compose([
+                          FormBuilderValidators.required(
+                            errorText: 'Stok saat ini wajib diisi',
+                          ),
+                          FormBuilderValidators.integer(
+                            errorText: 'Nilai harus angka positif atau nol',
+                          ),
+                          FormBuilderValidators.min(
+                            0,
+                            errorText: 'Nilai harus angka positif atau nol',
+                          ),
+                        ]),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -175,11 +222,18 @@ class MedicineFormView extends GetView<MedicineFormController> {
                       decoration: const InputDecoration(
                         labelText: 'Stok Minimum',
                       ),
-                      validator: (v) => controller.numberText(
-                        v,
-                        'Stok minimum',
-                        integer: true,
-                      ),
+                      validator: FormBuilderValidators.compose([
+                        FormBuilderValidators.required(
+                          errorText: 'Stok minimum wajib diisi',
+                        ),
+                        FormBuilderValidators.integer(
+                          errorText: 'Nilai harus angka positif atau nol',
+                        ),
+                        FormBuilderValidators.min(
+                          0,
+                          errorText: 'Nilai harus angka positif atau nol',
+                        ),
+                      ]),
                     ),
                   ),
                 ],
@@ -238,6 +292,39 @@ class MedicineFormView extends GetView<MedicineFormController> {
       title: 'Tanggal Expired',
     );
     if (picked != null) controller.setExpiredDate(picked);
+  }
+}
+
+/// Compact icon button that opens [ScanView] and calls [onScanned] on success.
+class _ScanButton extends StatelessWidget {
+  const _ScanButton({required this.onScanned});
+
+  final void Function(MedicineModel medicine) onScanned;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Scan barcode',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () {
+          Get.to<void>(
+            () => ScanView(onBarcodeScanned: onScanned),
+            transition: Transition.downToUp,
+          );
+        },
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.primary),
+          ),
+          child: const Icon(AppIcons.barcode, color: AppColors.primary, size: 22),
+        ),
+      ),
+    );
   }
 }
 

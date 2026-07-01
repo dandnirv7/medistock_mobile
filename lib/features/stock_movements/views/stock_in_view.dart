@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -7,6 +8,7 @@ import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/app_date_picker.dart';
 import '../../medicines/models/medicine_model.dart';
+import '../../medicines/views/scan_view.dart';
 import '../../suppliers/models/supplier_model.dart';
 import '../controllers/stock_in_controller.dart';
 import '../../../core/theme/app_icons.dart';
@@ -44,6 +46,37 @@ class StockInView extends GetView<StockInController> {
                 icon: AppIcons.medicationOutlined,
                 child: _ObatDropdown(),
               ),
+              const SizedBox(height: 4),
+              // Scan button row for barcode lookup (Req 5.1).
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () {
+                    final c = Get.find<StockInController>();
+                    Get.to<void>(
+                      () => ScanView(
+                        onBarcodeScanned: (MedicineModel medicine) {
+                          // Auto-select the medicine by id (Req 5.3, 5.4).
+                          c.setMedicine(medicine.id);
+                          SnackbarHelper.success(
+                            'Obat dipilih: ${medicine.name}',
+                          );
+                        },
+                      ),
+                      transition: Transition.downToUp,
+                    );
+                  },
+                  icon: const Icon(AppIcons.barcode, size: 18),
+                  label: const Text('Scan Barcode'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                  ),
+                ),
+              ),
               if (controller.selectedMedicine != null) ...[
                 const SizedBox(height: 8),
                 _CurrentStockTile(medicine: controller.selectedMedicine!),
@@ -69,6 +102,16 @@ class StockInView extends GetView<StockInController> {
                     child: _UnitField(unit: controller.selectedMedicine?.unit ?? ''),
                   ),
                 ],
+              ),
+              const SizedBox(height: 14),
+              _LabeledField(
+                icon: AppIcons.package,
+                child: _BatchNumberField(),
+              ),
+              const SizedBox(height: 14),
+              _LabeledField(
+                icon: AppIcons.calendar_today_outlined,
+                child: _ExpiredDateField(),
               ),
               const SizedBox(height: 14),
               _LabeledField(
@@ -202,7 +245,11 @@ class _QuantityField extends StatelessWidget {
       controller: c.quantityCtrl,
       keyboardType: TextInputType.number,
       decoration: const InputDecoration(labelText: 'Jumlah'),
-      validator: c.positiveInt,
+      validator: FormBuilderValidators.compose([
+        FormBuilderValidators.required(errorText: 'Jumlah wajib diisi'),
+        FormBuilderValidators.integer(errorText: 'Nilai harus angka positif'),
+        FormBuilderValidators.min(1, errorText: 'Nilai harus angka positif'),
+      ]),
     );
   }
 }
@@ -249,6 +296,63 @@ class _DateField extends StatelessWidget {
         labelText: 'Tanggal Transaksi',
         suffixIcon: Icon(AppIcons.calendar_today_outlined),
       ),
+    );
+  }
+}
+
+class _BatchNumberField extends StatelessWidget {
+  // Allowed: letters (a-z, A-Z), digits (0-9), and hyphens (-).
+  static final _batchFormat = RegExp(r'^[a-zA-Z0-9\-]+$');
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<StockInController>();
+    return TextFormField(
+      controller: c.batchNumberCtrl,
+      decoration: const InputDecoration(labelText: 'Nomor Batch'),
+      validator: FormBuilderValidators.compose([
+        FormBuilderValidators.required(
+          errorText: 'Nomor batch wajib diisi',
+        ),
+        (value) {
+          if (value != null &&
+              value.trim().isNotEmpty &&
+              !_batchFormat.hasMatch(value.trim())) {
+            return 'Format batch: huruf, angka, dan tanda hubung saja';
+          }
+          return null;
+        },
+      ]),
+    );
+  }
+}
+
+class _ExpiredDateField extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<StockInController>();
+    final today = DateTime.now();
+    return TextFormField(
+      controller: c.expiredDateCtrl,
+      readOnly: true,
+      onTap: () async {
+        final picked = await AppDatePicker.show(
+          context,
+          initialDate: c.expiredDate ?? today,
+          firstDate: today,
+          title: 'Tanggal Kedaluwarsa',
+        );
+        if (picked != null) c.setExpiredDate(picked);
+      },
+      decoration: const InputDecoration(
+        labelText: 'Tanggal Kedaluwarsa',
+        suffixIcon: Icon(AppIcons.calendar_today_outlined),
+      ),
+      validator: FormBuilderValidators.compose([
+        FormBuilderValidators.required(
+          errorText: 'Tanggal kedaluwarsa harus pada atau setelah hari ini',
+        ),
+      ]),
     );
   }
 }

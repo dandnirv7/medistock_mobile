@@ -1,3 +1,5 @@
+import 'package:medistock_mobile/data/models/medicine_batch_model.dart';
+
 enum StockStatus { safe, low, out }
 
 enum ExpiredStatus { safe, soon, expired, unknown }
@@ -77,6 +79,7 @@ class MedicineModel {
     this.isActive = true,
     this.createdAt,
     this.updatedAt,
+    this.batches,
   });
 
   final String id;
@@ -98,6 +101,9 @@ class MedicineModel {
   final bool isActive;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+
+  /// Batch list from `GET /medicines/:id` (Req 1.9). Null when not included in the response.
+  final List<MedicineBatchModel>? batches;
 
   bool get isLowStock => currentStock <= minimumStock;
 
@@ -144,6 +150,9 @@ class MedicineModel {
       isActive: json['isActive'] as bool? ?? true,
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
       updatedAt: DateTime.tryParse(json['updatedAt']?.toString() ?? ''),
+      batches: (json['batches'] as List<dynamic>?)
+          ?.map((e) => MedicineBatchModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -167,6 +176,7 @@ class MedicineModel {
         'isActive': isActive,
         'createdAt': createdAt?.toIso8601String(),
         'updatedAt': updatedAt?.toIso8601String(),
+        if (batches != null) 'batches': batches!.map((b) => b.toJson()).toList(),
       };
 
   MedicineModel copyWith({

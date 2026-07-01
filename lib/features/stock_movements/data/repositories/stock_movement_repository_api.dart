@@ -41,6 +41,8 @@ class StockMovementRepositoryApi implements StockMovementRepository {
     String? supplierId,
     DateTime? transactionDate,
     String? notes,
+    String? batchNumber,
+    DateTime? expiredDate,
   }) async {
     final res = await _client.raw.post<Map<String, dynamic>>(
       '/stock-movements/in',
@@ -50,6 +52,8 @@ class StockMovementRepositoryApi implements StockMovementRepository {
         if (supplierId != null) 'supplierId': supplierId,
         if (transactionDate != null) 'transactionDate': transactionDate.toIso8601String().split('T').first,
         if (notes != null) 'notes': notes,
+        if (batchNumber != null) 'batchNumber': batchNumber,
+        if (expiredDate != null) 'expiredDate': expiredDate.toIso8601String().split('T').first,
       },
     );
     final data = (res.data?['data'] as Map<String, dynamic>?) ?? const {};

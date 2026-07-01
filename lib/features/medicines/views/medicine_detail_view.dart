@@ -11,6 +11,7 @@ import '../../../core/widgets/loading_overlay.dart';
 import '../controllers/medicine_detail_controller.dart';
 import '../models/medicine_model.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../../data/models/medicine_batch_model.dart';
 
 class MedicineDetailView extends GetView<MedicineDetailController> {
   const MedicineDetailView({super.key});
@@ -78,6 +79,8 @@ class MedicineDetailView extends GetView<MedicineDetailController> {
                 ],
               ),
             ],
+            const SizedBox(height: 16),
+            _BatchSection(batches: m.batches, unit: m.unit),
             const SizedBox(height: 24),
             Obx(
               () => Get.find<AuthSession>().userRx.value?.isAdmin == true
@@ -275,6 +278,137 @@ class _Row extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 color: valueColor,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BatchSection extends StatelessWidget {
+  const _BatchSection({required this.batches, required this.unit});
+  final List<MedicineBatchModel>? batches;
+  final String unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final cutoff = todayDate.add(const Duration(days: 30));
+
+    List<Widget> children;
+    if (batches == null || batches!.isEmpty) {
+      children = [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+          child: Center(
+            child: Text(
+              'Belum ada data batch',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+        ),
+      ];
+    } else {
+      children = batches!.map((batch) {
+        final expiry = DateTime.tryParse(batch.expiredDate);
+        final expiryDate = expiry != null
+            ? DateTime(expiry.year, expiry.month, expiry.day)
+            : null;
+
+        final isExpired =
+            expiryDate != null && expiryDate.isBefore(todayDate);
+        final isExpiringSoon = expiryDate != null &&
+            !isExpired &&
+            !expiryDate.isAfter(cutoff);
+
+        return _BatchRow(
+          batch: batch,
+          unit: unit,
+          isExpired: isExpired,
+          isExpiringSoon: isExpiringSoon,
+        );
+      }).toList();
+    }
+
+    return _Section(title: 'Batch', children: children);
+  }
+}
+
+class _BatchRow extends StatelessWidget {
+  const _BatchRow({
+    required this.batch,
+    required this.unit,
+    required this.isExpired,
+    required this.isExpiringSoon,
+  });
+  final MedicineBatchModel batch;
+  final String unit;
+  final bool isExpired;
+  final bool isExpiringSoon;
+
+  @override
+  Widget build(BuildContext context) {
+    final indicatorColor = isExpired
+        ? AppColors.danger
+        : isExpiringSoon
+            ? AppColors.warning
+            : AppColors.success;
+
+    final expiry = DateTime.tryParse(batch.expiredDate);
+    final expiryDisplay = expiry != null
+        ? DateFormatter.toDisplay(expiry)
+        : batch.expiredDate;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: indicatorColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  batch.batchNumber,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Exp: $expiryDisplay',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isExpired
+                        ? AppColors.danger
+                        : isExpiringSoon
+                            ? AppColors.warning
+                            : AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '${batch.quantity} $unit',
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
             ),
           ),
         ],

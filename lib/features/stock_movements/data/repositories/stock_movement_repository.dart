@@ -30,6 +30,8 @@ abstract class StockMovementRepository {
     String? supplierId,
     DateTime? transactionDate,
     String? notes,
+    String? batchNumber,
+    DateTime? expiredDate,
   });
 
   Future<StockMovementModel> stockOut({
