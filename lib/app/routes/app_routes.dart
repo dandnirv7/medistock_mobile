@@ -20,4 +20,6 @@ class AppRoutes {
   static const String stockLevels = '/stock-levels';
   static const String alerts = '/alerts';
   static const String profile = '/profile';
+  static const String stockReport = '/reports/stock';
+  static const String stockOutReport = '/reports/stock-out';
 }

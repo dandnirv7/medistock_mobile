@@ -18,6 +18,9 @@ import '../../features/medicines/views/medicine_form_view.dart';
 import '../../features/medicines/views/medicine_list_view.dart';
 import '../../features/profile/bindings/profile_binding.dart';
 import '../../features/profile/views/profile_view.dart';
+import '../../features/reports/bindings/reports_binding.dart';
+import '../../features/reports/views/stock_out_report_view.dart';
+import '../../features/reports/views/stock_report_view.dart';
 import '../../features/splash/bindings/splash_binding.dart';
 import '../../features/splash/views/splash_view.dart';
 import '../../features/stock_movements/bindings/stock_movement_binding.dart';
@@ -147,6 +150,18 @@ class AppPages {
       name: AppRoutes.profile,
       page: () => const ProfileView(),
       binding: ProfileBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: AppRoutes.stockReport,
+      page: () => const StockReportView(),
+      binding: ReportsBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: AppRoutes.stockOutReport,
+      page: () => const StockOutReportView(),
+      binding: ReportsBinding(),
       middlewares: [AuthMiddleware()],
     ),
   ];
