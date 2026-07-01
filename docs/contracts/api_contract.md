@@ -251,6 +251,8 @@ Login user.
 }
 ```
 
+> **Catatan**: field `data.user.role` (`ADMIN` atau `STAFF`) **wajib** ada di setiap response login yang berhasil. Role ini disimpan oleh mobile (`flutter_secure_storage`) dan digunakan untuk role-based UI gating.
+
 ### Error
 
 ```txt
@@ -825,6 +827,18 @@ Mengambil detail obat.
       "id": "uuid",
       "name": "PT Kimia Farma Tbk"
     },
+    "batches": [
+      {
+        "batchNumber": "BN-2025-001",
+        "expiredDate": "2026-06-30",
+        "quantity": 30
+      },
+      {
+        "batchNumber": "BN-2025-002",
+        "expiredDate": "2026-09-30",
+        "quantity": 20
+      }
+    ],
     "createdAt": "2025-05-01T10:00:00.000Z",
     "updatedAt": "2025-05-01T10:00:00.000Z"
   }
@@ -1064,6 +1078,8 @@ Mencatat stok masuk.
   "medicineId": "uuid",
   "supplierId": "uuid",
   "quantity": 50,
+  "batchNumber": "BN-2025-001",
+  "expiredDate": "2026-06-30",
   "transactionDate": "2025-05-10",
   "notes": "Pembelian rutin"
 }
@@ -1071,13 +1087,18 @@ Mencatat stok masuk.
 
 ### Validation
 
-| Field           | Rule                              |
-| --------------- | --------------------------------- |
-| medicineId      | required, must exist              |
-| supplierId      | optional, must exist if provided  |
-| quantity        | required, integer, greater than 0 |
-| transactionDate | required, valid date              |
-| notes           | optional                          |
+| Field           | Rule                                |
+| --------------- | ----------------------------------- |
+| medicineId      | required, must exist                |
+| supplierId      | optional, must exist if provided    |
+| quantity        | required, integer, greater than 0   |
+| batchNumber     | **required**, non-empty string      |
+| expiredDate     | **required**, valid date YYYY-MM-DD |
+| transactionDate | required, valid date                |
+| notes           | optional                            |
+
+> Jika `batchNumber` atau `expiredDate` tidak disertakan: **HTTP 422 `VALIDATION_ERROR`**.
+> Jika `expiredDate` lebih awal dari `transactionDate`: **HTTP 400 `INVALID_DATE`**.
 
 ### Business Rule
 
@@ -1087,6 +1108,12 @@ stockAfter = stockBefore + quantity
 medicine.currentStock = stockAfter
 stockMovement.type = IN
 stockMovement.reason = PURCHASE
+
+Batch upsert:
+  Jika medicine_batches (medicineId, batchNumber, expiredDate) sudah ada
+    → quantity += input.quantity (tidak buat batch baru)
+  Jika belum ada
+    → INSERT baris baru
 ```
 
 ### Success Response — 201
@@ -1114,6 +1141,8 @@ stockMovement.reason = PURCHASE
 
 Mencatat stok keluar.
 
+> ⚠️ **BREAKING CHANGE (upgrade MVP Layak Skripsi):** Behavior endpoint ini berubah. Sebelumnya backend hanya mengecek `quantity > medicine.currentStock`. Sekarang backend menjalankan **FEFO otomatis** — batch dikonsumsi berurutan dari `expired_date` paling dekat. Request body **tidak berubah**: mobile tetap hanya mengirim `quantity` dan metadata lainnya; pemilihan batch sepenuhnya dilakukan di backend (Req 2.5).
+
 ### Request Body
 
 ```json
@@ -1136,15 +1165,20 @@ Mencatat stok keluar.
 | transactionDate | required, valid date              |
 | notes           | optional                          |
 
-### Business Rule
+### Business Rule — FEFO
 
 ```txt
-Jika quantity > medicine.currentStock, request ditolak.
-stockBefore = medicine.currentStock
-stockAfter = stockBefore - quantity
-medicine.currentStock = stockAfter
-stockMovement.type = OUT
+1. Ambil semua batch obat dengan quantity > 0, urut expired_date ASC,
+   tiebreak created_at ASC.
+2. totalAvailable = Σ(batch.quantity)
+3. Jika quantity > totalAvailable → 400 INSUFFICIENT_STOCK
+4. Kurangi batch satu per satu (paling awal expired_date lebih dulu)
+   sampai total terpenuhi.
+5. medicine.currentStock -= quantity
+6. INSERT stock_movements (OUT, reason, stockBefore, stockAfter)
 ```
+
+Seluruh langkah dieksekusi dalam satu database transaction (`$transaction`). Jika gagal, seluruh perubahan di-rollback.
 
 ### Success Response — 201
 
@@ -1183,6 +1217,128 @@ stockMovement.type = OUT
 
 ---
 
+# 6.7 Reports
+
+## GET /reports/stock
+
+Laporan stok terkini per obat dengan rincian per batch.
+
+### Query
+
+```txt
+?categoryId=uuid       (optional)
+?supplierId=uuid       (optional)
+?status=low|expired|healthy  (optional)
+```
+
+### Allowed `status`
+
+```txt
+low       — currentStock <= minimumStock
+expired   — ada ≥1 batch dengan expiredDate < hari ini
+healthy   — currentStock > minimumStock DAN tidak ada batch expired
+```
+
+Nilai selain tiga di atas → **HTTP 422 `VALIDATION_ERROR`**.
+
+### Success Response — 200
+
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": [
+    {
+      "id": "uuid",
+      "code": "PAR-500",
+      "name": "Paracetamol 500 mg",
+      "unit": "Tablet",
+      "currentStock": 50,
+      "minimumStock": 10,
+      "categoryName": "Tablet",
+      "supplierName": "PT Kimia Farma Tbk",
+      "status": "healthy",
+      "batches": [
+        {
+          "batchNumber": "BN-2025-001",
+          "expiredDate": "2026-06-30",
+          "quantity": 30
+        },
+        {
+          "batchNumber": "BN-2025-002",
+          "expiredDate": "2026-09-30",
+          "quantity": 20
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Auth
+
+Bearer Token wajib. ADMIN dan STAFF diizinkan.
+
+---
+
+## GET /reports/stock-out
+
+Laporan stok keluar per periode: total kuantitas, total nilai rupiah, dan 5 obat terlaris.
+
+### Query
+
+```txt
+?date_from=2025-05-01   (required, YYYY-MM-DD)
+?date_to=2025-05-31     (required, YYYY-MM-DD)
+?medicine_id=uuid       (optional)
+?supplier_id=uuid       (optional)
+```
+
+> `date_from` dan `date_to` wajib keduanya.
+> Jika `date_from > date_to` → **HTTP 400 `INVALID_DATE`**.
+
+### Success Response — 200
+
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": {
+    "totalQuantity": 120,
+    "totalValue": 600000,
+    "top5": [
+      {
+        "medicineId": "uuid",
+        "code": "PAR-500",
+        "name": "Paracetamol 500 mg",
+        "totalQuantity": 60,
+        "totalValue": 300000
+      }
+    ]
+  }
+}
+```
+
+### Jika tidak ada record yang cocok
+
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": {
+    "totalQuantity": 0,
+    "totalValue": 0,
+    "top5": []
+  }
+}
+```
+
+### Auth
+
+Bearer Token wajib. ADMIN dan STAFF diizinkan.
+
+---
+
 # 7. Roles and Permission Contract
 
 ## 7.1 Roles
@@ -1194,34 +1350,40 @@ STAFF
 
 ## 7.2 Permission Matrix
 
-| Feature              | ADMIN | STAFF |
-| -------------------- | ----: | ----: |
-| Login                |   Yes |   Yes |
-| Dashboard            |   Yes |   Yes |
-| View medicines       |   Yes |   Yes |
-| Create medicine      |   Yes |    No |
-| Update medicine      |   Yes |    No |
-| Delete medicine      |   Yes |    No |
-| View categories      |   Yes |   Yes |
-| Create category      |   Yes |    No |
-| Update category      |   Yes |    No |
-| Delete category      |   Yes |    No |
-| View suppliers       |   Yes |   Yes |
-| Create supplier      |   Yes |    No |
-| Update supplier      |   Yes |    No |
-| Delete supplier      |   Yes |    No |
-| Stock in             |   Yes |   Yes |
-| Stock out            |   Yes |   Yes |
-| View stock movements |   Yes |   Yes |
-| Profile              |   Yes |   Yes |
+| Resource / Aksi                              | ADMIN | STAFF |
+| -------------------------------------------- | :---: | :---: |
+| Login                                        |  Yes  |  Yes  |
+| Dashboard (`GET /dashboard/summary`)         |  Yes  |  Yes  |
+| View medicines (list & detail)               |  Yes  |  Yes  |
+| Create medicine                              |  Yes  |  No   |
+| Update medicine                              |  Yes  |  No   |
+| Delete medicine                              |  Yes  |  No   |
+| View categories (list & detail)              |  Yes  |  Yes  |
+| Create category                              |  Yes  |  No   |
+| Update category                              |  Yes  |  No   |
+| Delete category                              |  Yes  |  No   |
+| View suppliers (list & detail)               |  Yes  |  Yes  |
+| Create supplier                              |  Yes  |  No   |
+| Update supplier                              |  Yes  |  No   |
+| Delete supplier                              |  Yes  |  No   |
+| View users (list & detail)                   |  Yes  |  No   |
+| Create user                                  |  Yes  |  No   |
+| Update user                                  |  Yes  |  No   |
+| Delete user                                  |  Yes  |  No   |
+| Update own profile (`PATCH /users/me`)       |  Yes  |  Yes  |
+| Change own password (`PATCH /users/me/password`) | Yes | Yes |
+| Stock in (`POST /stock-movements/in`)        |  Yes  |  Yes  |
+| Stock out (`POST /stock-movements/out`)      |  Yes  |  Yes  |
+| View stock movements                         |  Yes  |  Yes  |
+| Reports (`GET /reports/stock`)               |  Yes  |  Yes  |
+| Reports (`GET /reports/stock-out`)           |  Yes  |  Yes  |
+| Profile / Logout                             |  Yes  |  Yes  |
 
-### Simplification Option
+### Role enforcement backend
 
-Jika ingin lebih cepat, abaikan role permission detail dan gunakan satu role:
-
-```txt
-ADMIN
-```
+- `ADMIN`: akses penuh ke seluruh endpoint terproteksi.
+- `STAFF`: ditolak `403 FORBIDDEN` pada semua endpoint create, update, delete untuk resource `users`, `categories`, dan `suppliers`. Akses baca (list & detail) pada `categories` dan `suppliers` tetap diizinkan. Stok masuk, stok keluar, dashboard, dan reports diizinkan.
+- Role disimpan di JWT payload `{ sub, username, role }` dan dikembalikan pada response login di `data.user.role`.
 
 ---
 
@@ -1257,13 +1419,12 @@ Perubahan yang dianggap breaking:
 
 # 9. Explicit Out of Scope API
 
-Endpoint berikut tidak boleh dibuat pada MVP demo:
+Endpoint berikut tidak boleh dibuat pada MVP (termasuk upgrade MVP Layak Skripsi):
 
 ```txt
 /auth/register
 /auth/forgot-password
 /auth/reset-password
-/medicine-batches
 /purchase-orders
 /purchase-order-items
 /sales
@@ -1271,7 +1432,6 @@ Endpoint berikut tidak boleh dibuat pada MVP demo:
 /audit-logs
 /notifications
 /settings
-/barcodes
 /uploads
 /payments
 /exports/pdf
@@ -1281,21 +1441,20 @@ Fitur berikut juga out of scope:
 1. Register user dari mobile.
 2. Forgot password.
 3. Upload foto obat.
-4. Barcode scanner.
-5. Batch obat.
-6. FEFO.
-7. Purchase order.
-8. Sales/kasir lengkap.
-10. Audit log.
-11. Notification push.
-12. App settings dynamic.
-14. Export PDF.
-15. Export Excel.
-16. Payment gateway.
-17. Multi-cabang.
-18. Offline sync.
-19. WebSocket.
-20. Realtime dashboard.
+4. Purchase order.
+5. Sales/kasir lengkap.
+6. Audit log.
+7. Notification push.
+8. App settings dynamic.
+9. Export PDF.
+10. Export Excel.
+11. Payment gateway.
+12. Multi-cabang.
+13. Offline sync.
+14. WebSocket.
+15. Realtime dashboard.
+
+> **Catatan upgrade**: `/medicine-batches` (endpoint CRUD publik), barcode scanner, FEFO, batch obat, dan reports (`GET /reports/stock`, `GET /reports/stock-out`) **sudah masuk scope** pada upgrade MVP Layak Skripsi dan tidak lagi out of scope. Lihat Section 6.7.
 ---
 
 # 10. Endpoint Summary
@@ -1348,6 +1507,8 @@ Fitur berikut juga out of scope:
 | GET    | /stock-movements     | List stock movements | Bearer |
 | POST   | /stock-movements/in  | Create stock in      | Bearer |
 | POST   | /stock-movements/out | Create stock out     | Bearer |
+| GET    | /reports/stock       | Stock report         | Bearer |
+| GET    | /reports/stock-out   | Stock-out report     | Bearer |
 
 Total endpoint MVP:
 
@@ -1396,15 +1557,15 @@ categories
 suppliers
 medicines
 stock-movements
+medicine-batches
 prisma
 common
 reports
 ```
 
-Module yang tidak dibuat untuk MVP:
+Module yang tidak dibuat untuk MVP (termasuk upgrade):
 
 ```txt
-medicine-batches
 purchase-orders
 sales
 audit-logs

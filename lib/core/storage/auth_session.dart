@@ -5,6 +5,12 @@ import 'secure_storage_service.dart';
 
 /// Sync, in-memory authentication state. Hydrated from [SecureStorageService]
 /// at app start and kept in sync after login/logout.
+///
+/// Role storage (Req 6.8): `role` is persisted as part of [UserModel] via
+/// [SecureStorageService.writeUser] / [SecureStorageService.readUser].
+/// [_encode] serializes `"role":"<value>"` and [_decode] reads it back, so
+/// no separate storage key is needed — the role is always available via
+/// [user?.role], [isAdmin], and [isStaff].
 class AuthSession extends GetxService {
   AuthSession({SecureStorageService? storage})
       : _storage = storage ?? Get.find<SecureStorageService>();

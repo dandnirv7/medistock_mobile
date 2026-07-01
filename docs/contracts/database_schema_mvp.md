@@ -132,6 +132,28 @@ OTHER
 
 ---
 
+## medicine_batches
+
+Satu lot fisik obat dengan nomor batch dan tanggal kedaluwarsa tersendiri. Dibuat hanya melalui stok masuk.
+
+| Field        | Type         | Notes                              |
+| ------------ | ------------ | ---------------------------------- |
+| id           | uuid         | PK                                 |
+| medicine_id  | uuid FK      | → medicines.id (ON DELETE CASCADE) |
+| batch_number | varchar(100) |                                    |
+| expired_date | date         |                                    |
+| quantity     | integer      | ≥ 0                                |
+| created_at   | timestamp    | tiebreak FEFO                      |
+| updated_at   | timestamp    |                                    |
+
+**Unique constraint**: `(medicine_id, batch_number, expired_date)` — mendukung upsert saat stok masuk duplikat.
+
+**Index**: `(medicine_id, expired_date)` — mendukung urutan FEFO.
+
+**Relasi**: setiap record `medicine_batches` terhubung ke tepat satu record `medicines` melalui `medicine_id`. Jika record `medicines` dihapus, seluruh batch terkait ikut dihapus (cascade).
+
+---
+
 # ERD Summary
 
 users
@@ -145,7 +167,8 @@ suppliers
 └── stock_movements
 
 medicines
-└── stock_movements
+├── stock_movements
+└── medicine_batches
 
 ---
 
@@ -172,13 +195,22 @@ current_stock <= minimum_stock
 ## Hampir Expired
 
 ```sql
-expired_date <= CURRENT_DATE + 30
+EXISTS (
+  SELECT 1 FROM medicine_batches mb
+  WHERE mb.medicine_id = medicines.id
+    AND mb.expired_date >= CURRENT_DATE
+    AND mb.expired_date <= CURRENT_DATE + 30
+)
 ```
 
 ## Sudah Expired
 
 ```sql
-expired_date < CURRENT_DATE
+EXISTS (
+  SELECT 1 FROM medicine_batches mb
+  WHERE mb.medicine_id = medicines.id
+    AND mb.expired_date < CURRENT_DATE
+)
 ```
 
 ---
@@ -207,15 +239,15 @@ expired_date < CURRENT_DATE
 
 ✅ Search & Filter
 
+✅ Batch Obat (upgrade: tabel `medicine_batches`, FEFO)
+
+✅ Reports (upgrade: `GET /reports/stock`, `GET /reports/stock-out`)
+
 ---
 
 # Excluded Features
 
-❌ Batch Obat
-
 ❌ Purchase Order
-
-❌ Sales
 
 ❌ Sale Items
 
@@ -227,12 +259,11 @@ expired_date < CURRENT_DATE
 
 ❌ Settings
 
-❌ Reports
-
-Schema MVP hanya terdiri dari:
+Schema MVP terdiri dari:
 
 - users
 - categories
 - suppliers
 - medicines
 - stock_movements
+- medicine_batches (ditambahkan pada upgrade MVP Layak Skripsi)
