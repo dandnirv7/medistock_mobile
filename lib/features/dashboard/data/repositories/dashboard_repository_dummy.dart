@@ -19,6 +19,10 @@ class DashboardRepositoryDummy implements DashboardRepository {
       0,
       (sum, m) => sum + (m.purchasePrice * m.currentStock),
     );
+    final totalAssetValue = meds.fold<double>(
+      0,
+      (sum, m) => sum + (m.purchasePrice * m.currentStock),
+    );
 
     final lowSample = lowStock.take(3).toList();
     final soonSample = expiredSoon.take(3).toList();
@@ -30,11 +34,13 @@ class DashboardRepositoryDummy implements DashboardRepository {
       totalSuppliers: _store.suppliersMutable.where((s) => s.isActive).length,
       totalStock: totalStock,
       totalValue: totalValue,
+      totalAssetValue: totalAssetValue,
       lowStockCount: lowStock.length,
       expiredSoonCount: expiredSoon.length,
       expiredCount: expired.length,
       lowStockMedicines: lowSample,
       expiredSoonMedicines: soonSample,
+      recentMovements: const [],
     );
   }
 }

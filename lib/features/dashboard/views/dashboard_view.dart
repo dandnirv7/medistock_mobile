@@ -7,6 +7,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/section_header.dart';
@@ -180,6 +182,26 @@ class DashboardView extends GetView<DashboardController> {
                     .openMedicines(expired: MedicineExpiredFilter.soon),
               ),
               const SizedBox(height: AppSpacing.xl),
+              if (summary.recentMovements.isNotEmpty) ...[
+                SectionHeader(
+                  title: 'Mutasi Terakhir',
+                  action: GestureDetector(
+                    onTap: () => Get.toNamed(AppRoutes.stockMovements),
+                    child: Text(
+                      'Lihat semua',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _RecentMovementsList(
+                  movements: summary.recentMovements.take(5).toList(),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+              ],
               const _QuickActions(),
             ],
           );
@@ -291,14 +313,7 @@ class _StatGrid extends StatelessWidget {
           accent: AppColors.primary,
           unit: 'Jenis',
         ),
-        DashboardStatCard(
-          label: 'Kategori',
-          value: summary.totalCategories,
-          icon: AppIcons.categories,
-          accent: AppColors.primary,
-          unit: 'Kategori',
-          onTap: () => Get.toNamed(AppRoutes.categories),
-        ),
+        _AssetValueCard(value: summary.totalAssetValue),
         DashboardStatCard(
           label: 'Hampir Expired',
           value: summary.expiredSoonCount,
@@ -314,6 +329,71 @@ class _StatGrid extends StatelessWidget {
           unit: 'Supplier',
         ),
       ],
+    );
+  }
+}
+
+/// Stat card for total asset value (currency-formatted, no int value).
+class _AssetValueCard extends StatelessWidget {
+  const _AssetValueCard({required this.value});
+
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.lg),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.success.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppSpacing.sm),
+            ),
+            child: Icon(
+              AppIcons.warehouse,
+              size: 20,
+              color: AppColors.success.withValues(alpha: 0.85),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            CurrencyFormatter.format(value),
+            style: AppTextStyles.cardTitle.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Nilai Aset',
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -420,10 +500,116 @@ class _AlertCard extends StatelessWidget {
   }
 }
 
-/// Soft tint backgrounds for the four quick-action buttons. The UI reference
-/// uses a single calm green family for all four actions (medicine, stock-in,
-/// stock-out, mutations), so the tiles share one light-green tint and a green
-/// icon — only the glyph differs.
+// ---------------------------------------------------------------------------
+// Mutasi Terakhir
+// ---------------------------------------------------------------------------
+
+class _RecentMovementsList extends StatelessWidget {
+  const _RecentMovementsList({required this.movements});
+
+  final List<RecentMovementModel> movements;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadii.border(AppRadii.lg),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          for (int i = 0; i < movements.length; i++) ...[
+            _RecentMovementTile(movement: movements[i]),
+            if (i < movements.length - 1)
+              const Divider(
+                height: 1,
+                indent: AppSpacing.lg + 40 + AppSpacing.md,
+                endIndent: 0,
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RecentMovementTile extends StatelessWidget {
+  const _RecentMovementTile({required this.movement});
+
+  final RecentMovementModel movement;
+
+  @override
+  Widget build(BuildContext context) {
+    final isIn = movement.isIn;
+    final accent = isIn ? AppColors.success : AppColors.danger;
+    final icon = isIn ? AppIcons.stockIn : AppIcons.stockOut;
+    final sign = isIn ? '+' : '-';
+    final dateStr =
+        DateFormatter.toDisplayShort(movement.transactionDate);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: AppRadii.border(AppRadii.md),
+            ),
+            child: Icon(icon, color: accent, size: 18),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  movement.medicineName,
+                  style: AppTextStyles.body.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  dateStr,
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  maxLines: 1,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            '$sign${movement.quantity}',
+            style: AppTextStyles.body.copyWith(
+              color: accent,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Quick actions
+// ---------------------------------------------------------------------------
+
+/// Soft tint backgrounds for the four quick-action buttons.
 const List<Color> _quickActionTints = [
   AppColors.primaryLight,
   AppColors.primaryLight,
