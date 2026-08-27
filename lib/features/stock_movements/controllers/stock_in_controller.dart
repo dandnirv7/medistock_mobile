@@ -8,9 +8,16 @@ import '../../suppliers/models/supplier_model.dart';
 import '../data/repositories/stock_movement_repository.dart';
 
 class StockInController extends GetxController {
-  StockInController(this._repo);
+  StockInController(
+    this._repo, [
+    MedicineRepository? medicineRepo,
+    SupplierRepository? supplierRepo,
+  ])  : _medicineRepo = medicineRepo ?? Get.find<MedicineRepository>(),
+        _supplierRepo = supplierRepo ?? Get.find<SupplierRepository>();
 
   final StockMovementRepository _repo;
+  final MedicineRepository _medicineRepo;
+  final SupplierRepository _supplierRepo;
 
   final formKey = GlobalKey<FormState>();
   final quantityCtrl = TextEditingController(text: '0');
@@ -21,7 +28,9 @@ class StockInController extends GetxController {
   final RxList<MedicineModel> medicines = <MedicineModel>[].obs;
   final RxList<SupplierModel> suppliers = <SupplierModel>[].obs;
   final RxBool isLoading = false.obs;
+  final RxBool isLookupsLoading = true.obs;
   final RxnString errorMessage = RxnString();
+  final RxnString lookupsError = RxnString();
   DateTime transactionDate = DateTime.now();
   MedicineModel? selectedMedicine;
 
@@ -43,25 +52,35 @@ class StockInController extends GetxController {
 
   /// Fetch medicines + suppliers for the lookup dropdowns.
   ///
-  /// Skipped when both lists already have data, so navigating away and
-  /// back to the StockIn screen does not re-hit the API. Pass
-  /// [force] = true to bypass the cache — used after a successful
-  /// stock-in so the picker reflects the new stock levels.
+  /// Always hits the API on first open (via injected repos) so the
+  /// picker never shows only "Tanpa supplier". Subsequent opens reuse
+  /// cache unless [force] is true (after successful stock-in).
   Future<void> _loadLookups({bool force = false}) async {
-    if (!force &&
-        medicines.isNotEmpty &&
-        suppliers.isNotEmpty) {
+    if (!force && medicines.isNotEmpty && suppliers.isNotEmpty) {
+      isLookupsLoading.value = false;
       return;
     }
-    if (Get.isRegistered<MedicineRepository>()) {
-      final repo = Get.find<MedicineRepository>();
-      final res = await repo.getAll(query: MedicineQuery(limit: 100));
-      medicines.assignAll(res.items);
-    }
-    if (Get.isRegistered<SupplierRepository>()) {
-      final repo = Get.find<SupplierRepository>();
-      final res = await repo.getAll(query: SupplierQuery(limit: 100));
-      suppliers.assignAll(res.items);
+    isLookupsLoading.value = true;
+    lookupsError.value = null;
+    try {
+      final medPage = await _medicineRepo.getAll(
+        query: MedicineQuery(limit: 100),
+      );
+      final supPage = await _supplierRepo.getAll(
+        query: SupplierQuery(limit: 100),
+      );
+      medicines.assignAll(medPage.items);
+      suppliers.assignAll(supPage.items);
+      if (medicines.isEmpty) {
+        lookupsError.value = 'Tidak ada obat. Tambahkan obat dulu.';
+      } else if (suppliers.isEmpty) {
+        lookupsError.value =
+            'Tidak ada supplier. Supplier akan tercatat sebagai "Tanpa supplier".';
+      }
+    } catch (e) {
+      lookupsError.value = 'Gagal memuat data: ${e.toString()}';
+    } finally {
+      isLookupsLoading.value = false;
     }
   }
 

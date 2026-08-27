@@ -22,12 +22,102 @@ class StockOutView extends GetView<StockOutController> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
             _ErrorBanner(),
+            Obx(() {
+              if (controller.isLookupsLoading.value) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: const Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 10),
+                      Text(
+                        'Memuat obat...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            }),
+            Obx(() {
+              final msg = controller.lookupsError.value;
+              if (msg == null) return const SizedBox.shrink();
+              return Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.orange.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 18,
+                      color: Colors.orange,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        msg,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF8A6100),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: controller.isLookupsLoading.value
+                          ? null
+                          : () => controller.refreshMedicines(),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        child: Text(
+                          'Muat ulang',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
             _LabeledField(
               icon: AppIcons.medicationOutlined,
               child: _ObatDropdown(),
             ),
             Obx(() {
-              controller.medicineId.value; // subscribe
+              controller.medicineId.value;
               final med = controller.selectedMedicine;
               if (med == null) return const SizedBox.shrink();
               return Padding(
@@ -101,10 +191,17 @@ class _ObatDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Get.find<StockOutController>();
-    return Obx(
-      () => DropdownButtonFormField<String>(
+    return Obx(() {
+      final isLoading = c.isLookupsLoading.value;
+      final hint = isLoading
+          ? 'Memuat obat...'
+          : c.medicines.isEmpty
+              ? 'Tidak ada obat'
+              : null;
+      return DropdownButtonFormField<String>(
         initialValue: c.medicineId.value,
         isExpanded: true,
+        hint: hint == null ? null : Text(hint),
         items: c.medicines
             .map(
               (m) => DropdownMenuItem(
@@ -113,11 +210,11 @@ class _ObatDropdown extends StatelessWidget {
               ),
             )
             .toList(),
-        onChanged: c.setMedicine,
-        decoration: const InputDecoration(labelText: 'Obat'),
+        onChanged: isLoading ? null : c.setMedicine,
+        decoration: const InputDecoration(labelText: 'Obat *'),
         validator: (v) => v == null ? 'Pilih obat terlebih dahulu' : null,
-      ),
-    );
+      );
+    });
   }
 }
 
@@ -141,7 +238,7 @@ class _QuantityField extends StatelessWidget {
           flex: 1,
           child: Obx(
             () {
-              c.medicineId.value; // subscribe to changes
+              c.medicineId.value;
               return Container(
                 height: 56,
                 alignment: Alignment.center,
@@ -228,11 +325,11 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Get.find<StockOutController>();
     return Obx(() {
-      c.medicineId.value; // subscribe to medicine changes
+      c.medicineId.value;
       final med = c.selectedMedicine;
       return ValueListenableBuilder<TextEditingValue>(
         valueListenable: c.quantityCtrl,
-        builder: (context, _, __) {
+        builder: (context, _, _) {
           final qty = int.tryParse(c.quantityCtrl.text) ?? 0;
           final stockAfter =
               med == null ? 0 : (med.currentStock - qty).clamp(0, 1 << 30);

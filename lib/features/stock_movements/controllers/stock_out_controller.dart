@@ -7,9 +7,13 @@ import '../data/repositories/stock_movement_repository.dart';
 import '../models/stock_movement_model.dart';
 
 class StockOutController extends GetxController {
-  StockOutController(this._repo);
+  StockOutController(
+    this._repo, [
+    MedicineRepository? medicineRepo,
+  ])  : _medicineRepo = medicineRepo ?? Get.find<MedicineRepository>();
 
   final StockMovementRepository _repo;
+  final MedicineRepository _medicineRepo;
 
   final formKey = GlobalKey<FormState>();
   final quantityCtrl = TextEditingController(text: '0');
@@ -20,7 +24,9 @@ class StockOutController extends GetxController {
       Rx<StockMovementReason>(StockMovementReason.sale);
   final RxList<MedicineModel> medicines = <MedicineModel>[].obs;
   final RxBool isLoading = false.obs;
+  final RxBool isLookupsLoading = true.obs;
   final RxnString errorMessage = RxnString();
+  final RxnString lookupsError = RxnString();
   DateTime transactionDate = DateTime.now();
   MedicineModel? selectedMedicine;
 
@@ -41,16 +47,26 @@ class StockOutController extends GetxController {
 
   /// Fetch medicines for the picker dropdown.
   ///
-  /// Skipped when the list is already populated, so navigating away and
-  /// back to the StockOut screen does not re-hit the API. Pass
-  /// [force] = true to bypass the cache — used after a successful
-  /// stock-out so the picker reflects the new stock levels.
+  /// Uses injected repo so the picker works even if user never visited
+  /// Obat screen first. Supports [force] to refresh after write.
   Future<void> _loadMedicines({bool force = false}) async {
-    if (!force && medicines.isNotEmpty) return;
-    if (!Get.isRegistered<MedicineRepository>()) return;
-    final repo = Get.find<MedicineRepository>();
-    final res = await repo.getAll(query: MedicineQuery(limit: 100));
-    medicines.assignAll(res.items);
+    if (!force && medicines.isNotEmpty) {
+      isLookupsLoading.value = false;
+      return;
+    }
+    isLookupsLoading.value = true;
+    lookupsError.value = null;
+    try {
+      final res = await _medicineRepo.getAll(query: MedicineQuery(limit: 100));
+      medicines.assignAll(res.items);
+      if (medicines.isEmpty) {
+        lookupsError.value = 'Tidak ada obat. Tambahkan obat dulu.';
+      }
+    } catch (e) {
+      lookupsError.value = 'Gagal memuat obat: ${e.toString()}';
+    } finally {
+      isLookupsLoading.value = false;
+    }
   }
 
   /// Public wrapper so views can trigger a pull-to-refresh style reload.

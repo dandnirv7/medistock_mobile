@@ -39,14 +39,102 @@ class StockInView extends GetView<StockInController> {
                     style: const TextStyle(color: AppColors.danger),
                   ),
                 ),
+              if (controller.isLookupsLoading.value)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: const Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 10),
+                      Text(
+                        'Memuat obat & supplier...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (controller.lookupsError.value != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.orange.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        size: 18,
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          controller.lookupsError.value!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF8A6100),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: controller.isLookupsLoading.value
+                            ? null
+                            : () => controller.refreshLookups(),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          child: Text(
+                            'Muat ulang',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               _LabeledField(
                 icon: AppIcons.medicationOutlined,
                 child: _ObatDropdown(),
               ),
-              if (controller.selectedMedicine != null) ...[
-                const SizedBox(height: 8),
-                _CurrentStockTile(medicine: controller.selectedMedicine!),
-              ],
+              Obx(() {
+                final med = controller.selectedMedicine;
+                controller.medicineId.value;
+                if (med == null) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: _CurrentStockTile(medicine: med),
+                );
+              }),
               const SizedBox(height: 14),
               _LabeledField(
                 icon: AppIcons.localShippingOutlined,
@@ -63,9 +151,9 @@ class StockInView extends GetView<StockInController> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Expanded(
+                  const Expanded(
                     flex: 1,
-                    child: _UnitField(unit: controller.selectedMedicine?.unit ?? ''),
+                    child: _UnitField(),
                   ),
                 ],
               ),
@@ -143,24 +231,33 @@ class _ObatDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Get.find<StockInController>();
-    return DropdownButtonFormField<String>(
-      initialValue: c.medicineId.value,
-      isExpanded: true,
-      items: c.medicines
-          .map(
-            (m) => DropdownMenuItem(
-              value: m.id,
-              child: Text(
-                m.name,
-                overflow: TextOverflow.ellipsis,
+    return Obx(() {
+      final isLoading = c.isLookupsLoading.value;
+      final hint = isLoading
+          ? 'Memuat obat...'
+          : c.medicines.isEmpty
+              ? 'Tidak ada obat'
+              : null;
+      return DropdownButtonFormField<String>(
+        initialValue: c.medicineId.value,
+        isExpanded: true,
+        hint: hint == null ? null : Text(hint),
+        items: c.medicines
+            .map(
+              (m) => DropdownMenuItem(
+                value: m.id,
+                child: Text(
+                  m.name,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          )
-          .toList(),
-      onChanged: c.setMedicine,
-      decoration: const InputDecoration(labelText: 'Obat'),
-      validator: (v) => v == null ? 'Pilih obat terlebih dahulu' : null,
-    );
+            )
+            .toList(),
+        onChanged: isLoading ? null : c.setMedicine,
+        decoration: const InputDecoration(labelText: 'Obat *'),
+        validator: (v) => v == null ? 'Pilih obat terlebih dahulu' : null,
+      );
+    });
   }
 }
 
@@ -168,24 +265,34 @@ class _SupplierDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Get.find<StockInController>();
-    return DropdownButtonFormField<String?>(
-      initialValue: c.supplierId.value,
-      isExpanded: true,
-      items: [
-        const DropdownMenuItem<String?>(
-          value: null,
-          child: Text('Tanpa supplier'),
-        ),
-        ...c.suppliers.map(
-          (SupplierModel s) => DropdownMenuItem<String?>(
-            value: s.id,
-            child: Text(s.name, overflow: TextOverflow.ellipsis),
+    return Obx(() {
+      final isLoading = c.isLookupsLoading.value;
+      final hint = isLoading ? 'Memuat supplier...' : null;
+      return DropdownButtonFormField<String?>(
+        initialValue: c.supplierId.value,
+        isExpanded: true,
+        hint: hint == null ? null : Text(hint),
+        items: [
+          const DropdownMenuItem<String?>(
+            value: null,
+            child: Text('Tanpa supplier'),
           ),
+          ...c.suppliers.map(
+            (SupplierModel s) => DropdownMenuItem<String?>(
+              value: s.id,
+              child: Text(s.name, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+        ],
+        onChanged: isLoading ? null : c.setSupplier,
+        decoration: InputDecoration(
+          labelText: 'Supplier',
+          helperText: c.suppliers.isEmpty && !isLoading
+              ? 'Belum ada supplier — pilih "Tanpa supplier"'
+              : null,
         ),
-      ],
-      onChanged: c.setSupplier,
-      decoration: const InputDecoration(labelText: 'Supplier'),
-    );
+      );
+    });
   }
 }
 
@@ -203,25 +310,29 @@ class _QuantityField extends StatelessWidget {
 }
 
 class _UnitField extends StatelessWidget {
-  const _UnitField({required this.unit});
-  final String unit;
+  const _UnitField();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 56,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Text(
-        unit.isEmpty ? '-' : unit,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-    );
+    final c = Get.find<StockInController>();
+    return Obx(() {
+      c.medicineId.value;
+      final unit = c.selectedMedicine?.unit ?? '';
+      return Container(
+        height: 56,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Text(
+          unit.isEmpty ? '-' : unit,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      );
+    });
   }
 }
 
