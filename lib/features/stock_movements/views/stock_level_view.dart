@@ -15,31 +15,33 @@ class StockLevelView extends GetView<MedicineListController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: TextField(
-              onChanged: controller.setSearch,
-              decoration: InputDecoration(
-                hintText: 'Cari nama atau kode obat...',
-                prefixIcon: const Icon(AppIcons.search),
-                suffixIcon: Obx(
-                  () => controller.search.value.isEmpty
-                      ? const SizedBox.shrink()
-                      : IconButton(
-                          icon: const Icon(AppIcons.close),
-                          onPressed: () {
-                            controller.search.value = '';
-                            controller.fetch();
-                          },
-                        ),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                onChanged: controller.setSearch,
+                decoration: InputDecoration(
+                  hintText: 'Cari nama atau kode obat...',
+                  prefixIcon: const Icon(AppIcons.search),
+                  suffixIcon: Obx(
+                    () => controller.search.value.isEmpty
+                        ? const SizedBox.shrink()
+                        : IconButton(
+                            icon: const Icon(AppIcons.close),
+                            onPressed: () {
+                              controller.search.value = '';
+                              controller.fetch();
+                            },
+                          ),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
             ),
-          ),
           _StockFilterRow(),
           Expanded(
             child: Obx(() {
@@ -66,6 +68,7 @@ class StockLevelView extends GetView<MedicineListController> {
             }),
           ),
         ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showMovementTypeSheet,
