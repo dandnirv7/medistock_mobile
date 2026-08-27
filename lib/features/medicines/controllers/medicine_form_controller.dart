@@ -10,9 +10,16 @@ import '../data/repositories/medicine_repository.dart';
 import '../models/medicine_model.dart';
 
 class MedicineFormController extends GetxController {
-  MedicineFormController(this._repo);
+  MedicineFormController(
+    this._repo, [
+    CategoryRepository? categoryRepo,
+    SupplierRepository? supplierRepo,
+  ])  : _categoryRepo = categoryRepo ?? Get.find<CategoryRepository>(),
+        _supplierRepo = supplierRepo ?? Get.find<SupplierRepository>();
 
   final MedicineRepository _repo;
+  final CategoryRepository _categoryRepo;
+  final SupplierRepository _supplierRepo;
 
   final formKey = GlobalKey<FormState>();
   final codeCtrl = TextEditingController();
@@ -30,7 +37,9 @@ class MedicineFormController extends GetxController {
   final RxnString categoryId = RxnString();
   final RxnString supplierId = RxnString();
   final RxBool isLoading = false.obs;
+  final RxBool isLookupsLoading = true.obs;
   final RxnString errorMessage = RxnString();
+  final RxnString lookupsError = RxnString();
   final RxBool isActive = true.obs;
   DateTime? expiredDate;
   MedicineModel? editing;
@@ -73,17 +82,33 @@ class MedicineFormController extends GetxController {
   }
 
   Future<void> _loadLookups() async {
-    if (Get.isRegistered<CategoryRepository>()) {
-      final repo = Get.find<CategoryRepository>();
-      final res = await repo.getAll(query: CategoryQuery(limit: 100));
-      categories.assignAll(res.items);
-    }
-    if (Get.isRegistered<SupplierRepository>()) {
-      final repo = Get.find<SupplierRepository>();
-      final res = await repo.getAll(query: SupplierQuery(limit: 100));
-      suppliers.assignAll(res.items);
+    isLookupsLoading.value = true;
+    lookupsError.value = null;
+    try {
+      final catPage = await _categoryRepo.getAll(
+        query: CategoryQuery(limit: 100),
+      );
+      final supPage = await _supplierRepo.getAll(
+        query: SupplierQuery(limit: 100),
+      );
+      categories.assignAll(catPage.items);
+      suppliers.assignAll(supPage.items);
+      if (categories.isEmpty && suppliers.isEmpty) {
+        lookupsError.value =
+            'Tidak ada kategori & supplier. Tambahkan data master dulu atau periksa koneksi.';
+      } else if (categories.isEmpty) {
+        lookupsError.value = 'Tidak ada kategori. Tambahkan kategori dulu.';
+      } else if (suppliers.isEmpty) {
+        lookupsError.value = 'Tidak ada supplier. Tambahkan supplier dulu.';
+      }
+    } catch (e) {
+      lookupsError.value = 'Gagal memuat kategori/supplier: ${e.toString()}';
+    } finally {
+      isLookupsLoading.value = false;
     }
   }
+
+  Future<void> reloadLookups() => _loadLookups();
 
   void setExpiredDate(DateTime date) {
     expiredDate = date;
@@ -122,6 +147,10 @@ class MedicineFormController extends GetxController {
     if (!(formKey.currentState?.validate() ?? false)) return false;
     if (categoryId.value == null || categoryId.value!.isEmpty) {
       errorMessage.value = 'Kategori wajib dipilih';
+      return false;
+    }
+    if (supplierId.value == null || supplierId.value!.isEmpty) {
+      errorMessage.value = 'Supplier wajib dipilih';
       return false;
     }
     isLoading.value = true;

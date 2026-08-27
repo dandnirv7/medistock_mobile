@@ -8,8 +8,10 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/data_async_view.dart';
 import '../../../core/widgets/status_badge.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/storage/auth_session.dart';
 import '../../categories/data/repositories/category_repository.dart';
+import '../../categories/data/repositories/category_repository_api.dart';
 import '../../categories/models/category_model.dart';
 import '../controllers/medicine_list_controller.dart';
 import '../data/repositories/medicine_repository.dart' show MedicineExpiredFilter;
@@ -193,7 +195,12 @@ class _CategoryFilterSheetState extends State<_CategoryFilterSheet> {
   }
 
   Future<List<CategoryModel>> _fetch() async {
-    if (!Get.isRegistered<CategoryRepository>()) return const [];
+    if (!Get.isRegistered<CategoryRepository>()) {
+      Get.lazyPut<CategoryRepository>(
+        () => CategoryRepositoryApi(Get.find<ApiClient>()),
+        fenix: true,
+      );
+    }
     final repo = Get.find<CategoryRepository>();
     final page = await repo.getAll(query: CategoryQuery(limit: 100));
     return page.items;

@@ -56,6 +56,91 @@ class MedicineFormView extends GetView<MedicineFormController> {
                     controller.requiredText(v, 'Nama obat'),
               ),
               const SizedBox(height: 12),
+              if (controller.isLookupsLoading.value)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: const Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 10),
+                      Text(
+                        'Memuat kategori & supplier...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (controller.isLookupsLoading.value)
+                const SizedBox(height: 12),
+              if (controller.lookupsError.value != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.orange.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        size: 18,
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          controller.lookupsError.value!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF8A6100),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: controller.isLookupsLoading.value
+                            ? null
+                            : () => controller.reloadLookups(),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          child: Text(
+                            'Muat ulang',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               _Dropdown<String>(
                 label: 'Kategori',
                 value: controller.categoryId.value,
@@ -67,8 +152,14 @@ class MedicineFormView extends GetView<MedicineFormController> {
                       ),
                     )
                     .toList(),
-                onChanged: (v) => controller.categoryId.value = v,
-                hint: 'Pilih kategori',
+                onChanged: controller.isLookupsLoading.value
+                    ? null
+                    : (v) => controller.categoryId.value = v,
+                hint: controller.isLookupsLoading.value
+                    ? 'Memuat kategori...'
+                    : controller.categories.isEmpty
+                        ? 'Tidak ada kategori — muat ulang'
+                        : 'Pilih kategori',
                 required: true,
               ),
               const SizedBox(height: 12),
@@ -83,8 +174,15 @@ class MedicineFormView extends GetView<MedicineFormController> {
                       ),
                     )
                     .toList(),
-                onChanged: (v) => controller.supplierId.value = v,
-                hint: 'Pilih supplier (opsional)',
+                onChanged: controller.isLookupsLoading.value
+                    ? null
+                    : (v) => controller.supplierId.value = v,
+                hint: controller.isLookupsLoading.value
+                    ? 'Memuat supplier...'
+                    : controller.suppliers.isEmpty
+                        ? 'Tidak ada supplier — muat ulang'
+                        : 'Pilih supplier',
+                required: true,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -229,7 +327,7 @@ class _Dropdown<T> extends StatelessWidget {
   final String label;
   final T? value;
   final List<DropdownMenuItem<T>> items;
-  final ValueChanged<T?> onChanged;
+  final ValueChanged<T?>? onChanged;
   final String? hint;
   final bool required;
 
