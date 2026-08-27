@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../controllers/login_controller.dart';
@@ -31,17 +30,17 @@ class LoginView extends GetView<LoginController> {
                     'Selamat Datang!',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Masuk untuk melanjutkan ke MediStock Inventory',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 32),
                   TextFormField(
@@ -94,7 +93,9 @@ class LoginView extends GetView<LoginController> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
-                        SnackbarHelper.info('Hubungi admin untuk reset password.');
+                        SnackbarHelper.info(
+                          'Hubungi admin untuk reset password.',
+                        );
                       },
                       child: const Text('Lupa password?'),
                     ),
@@ -113,52 +114,6 @@ class LoginView extends GetView<LoginController> {
                               ),
                             )
                           : const Text('Masuk'),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      const Expanded(child: Divider()),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Text(
-                          'atau',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: AppColors.textSecondary),
-                        ),
-                      ),
-                      const Expanded(child: Divider()),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      SnackbarHelper.info('Login dengan Google akan diaktifkan pada rilis berikutnya.');
-                    },
-                    icon: const Icon(AppIcons.g_mobiledata, size: 24),
-                    label: const Text('Masuk dengan Google'),
-                  ),
-                  const SizedBox(height: 24),
-                  Center(
-                    child: RichText(
-                      text: TextSpan(
-                        text: 'Belum punya akun? ',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(color: AppColors.textSecondary),
-                        children: const [
-                          TextSpan(
-                            text: 'Hubungi Admin Apotek',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
                 ],
