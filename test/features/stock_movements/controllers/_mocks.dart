@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:medistock_mobile/core/models/paginated.dart';
 import 'package:medistock_mobile/features/medicines/data/repositories/medicine_repository.dart';
 import 'package:medistock_mobile/features/medicines/models/medicine_model.dart';
@@ -23,7 +24,10 @@ class CountingMedicineRepository implements MedicineRepository {
   }
 
   @override
-  Future<Paginated<MedicineModel>> getAll({MedicineQuery? query}) async {
+  Future<Paginated<MedicineModel>> getAll({
+    MedicineQuery? query,
+    CancelToken? cancelToken,
+  }) async {
     getAllCalls += 1;
     return Paginated<MedicineModel>(
       items: _nextResult == null

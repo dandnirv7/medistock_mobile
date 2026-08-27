@@ -5,9 +5,7 @@ import 'package:medistock_mobile/core/widgets/stat_card.dart' show StatCard;
 
 import '../../support/gen.dart';
 
-class IconDataStub extends IconData {
-  const IconDataStub() : super(0xf000, fontFamily: 'stub');
-}
+const IconData kStubIcon = IconData(0xf000, fontFamily: 'stub');
 
 /// Pure clone of the counter's display function so the property can be
 /// tested without mounting a widget tree.
@@ -89,7 +87,7 @@ void main() {
     test('StatCard exposes the expected public surface', () {
       final c = StatCard(
         label: 'Total',
-        icon: const IconDataStub(),
+        icon: kStubIcon,
         accent: const Color(0xFF000000),
       );
       expect(c.duration, const Duration(milliseconds: 600));
