@@ -3,12 +3,15 @@ import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/snackbar_helper.dart';
-import '../../../core/storage/auth_session.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/haptics.dart';
+import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/storage/auth_session.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/loading_overlay.dart';
 import '../controllers/medicine_detail_controller.dart';
+import '../controllers/medicine_list_controller.dart';
 import '../models/medicine_model.dart';
 import '../../../core/theme/app_icons.dart';
 
@@ -80,40 +83,86 @@ class MedicineDetailView extends GetView<MedicineDetailController> {
             ],
             const SizedBox(height: 24),
             Obx(
-              () => Get.find<AuthSession>().userRx.value?.isAdmin == true
-                  ? Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.primary,
-                              side: const BorderSide(color: AppColors.primary),
-                              minimumSize: const Size.fromHeight(48),
-                            ),
-                            onPressed: () => Get.toNamed(
-                              AppRoutes.medicineForm,
-                              arguments: m,
-                            ),
-                            icon: const Icon(AppIcons.edit_outlined),
-                            label: const Text('Edit'),
-                          ),
+              () {
+                final isAdmin =
+                    Get.find<AuthSession>().userRx.value?.isAdmin == true;
+                if (!isAdmin) return const SizedBox.shrink();
+                final isDeleting = controller.isDeleting.value;
+                return Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                          minimumSize: const Size.fromHeight(48),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.danger,
-                              side: const BorderSide(color: AppColors.danger),
-                              minimumSize: const Size.fromHeight(48),
-                            ),
-                            onPressed: () => SnackbarHelper.info('Hapus obat akan tersedia di rilis berikutnya.'),
-                            icon: const Icon(AppIcons.delete_outline),
-                            label: const Text('Hapus'),
-                          ),
+                        onPressed: () => Get.toNamed(
+                          AppRoutes.medicineForm,
+                          arguments: m,
                         ),
-                      ],
-                    )
-                  : const SizedBox.shrink(),
+                        icon: const Icon(AppIcons.edit_outlined),
+                        label: const Text('Edit'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.danger,
+                          side: const BorderSide(color: AppColors.danger),
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                        onPressed: isDeleting
+                            ? null
+                            : () async {
+                                final confirmed = await ConfirmDialog.show(
+                                  context,
+                                  title: 'Hapus Obat',
+                                  message:
+                                      'Yakin ingin menghapus "${m.name}" (${m.code})? Tindakan ini tidak dapat dibatalkan.',
+                                  confirmLabel: 'Hapus',
+                                  cancelLabel: 'Batal',
+                                  destructive: true,
+                                );
+                                if (!confirmed) return;
+                                final ok =
+                                    await controller.deleteMedicine();
+                                if (ok) {
+                                  if (Get.isRegistered<
+                                      MedicineListController>()) {
+                                    // ignore: unawaited_futures
+                                    Get.find<MedicineListController>().load();
+                                  }
+                                  Get.back();
+                                  SnackbarHelper.success(
+                                    'Obat "${m.name}" berhasil dihapus',
+                                  );
+                                  await Haptics.lightSuccess();
+                                } else {
+                                  final msg = controller
+                                          .errorMessage.value ??
+                                      'Gagal menghapus obat';
+                                  SnackbarHelper.error(msg);
+                                  await Haptics.lightSuccess();
+                                }
+                              },
+                        icon: isDeleting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.danger,
+                                ),
+                              )
+                            : const Icon(AppIcons.delete_outline),
+                        label: Text(isDeleting ? 'Menghapus…' : 'Hapus'),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         );
